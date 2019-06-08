@@ -63,7 +63,7 @@ to reduce costs of subsequent queries.
 ## Cost analysis
 
 We anticipate this data collection to amount to
-~1 GB data/day per ~100K Pipelines operations,
+~1 GB data per ~100K instance hours,
 reported with 1 minute granularity.
 Incremental monthly cost of storage in this example
 would be ~$0.6, and querying 1 month worth of data ~$0.15.
