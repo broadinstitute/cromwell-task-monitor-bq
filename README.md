@@ -63,7 +63,9 @@ to reduce costs of subsequent queries.
 ## Cost analysis
 
 We anticipate this data collection to amount to
-~1 GB data per ~100K instance hours,
+~1 GB of data per ~100K instance hours,
 reported with 1 minute granularity.
 Incremental monthly cost of storage in this example
-would be ~$0.6, and querying 1 month worth of data ~$0.15.
+would be ~$0.02, and querying it ~$0.05
+(it may even fall within the
+[free tier](https://cloud.google.com/bigquery/pricing#free-tier)).
