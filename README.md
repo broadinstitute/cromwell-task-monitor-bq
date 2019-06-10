@@ -16,8 +16,7 @@ For each Pipelines operation, the monitoring container
 runs in parallel to all other containers on that GCE instance.
 This container will collect information about
 the task call attempt running on that instance.
-It would then report the metrics at the end of the task run
-in a format similar to the following:
+It would then report the metrics in a format similar to the following:
 
 | timestamp | project_id | zone | instance_id | instance_type | workflow_id  | task_call_name | task_call_index | task_call_attempt | preemptible | cpu_count | cpu_util_pct | mem_total_gb | mem_util_pct | disk_total_gb | disk_util_pct |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -25,12 +24,12 @@ in a format similar to the following:
 | 2019-06-07T23:20:43+00:00  | sample-project  | us-east1-b | gce-instance-1234 | n1-standard-2 | 11910a69-aaf5-428a-aae0-0b3b41ef396c | Task_Hello | 1 | 2 | True | 2 | 65 | 7.5 | 75 | 25 | 15 |
 
 Some information is stored redundantly, but that's OK.
-The actual amount of data stored in this format is miniscule (~ 10KB / hour, when reporting one row per minute),
+The actual amount of data stored in this format is miniscule (~10KB / hour, when reporting one row per minute),
 and we'd like each row to be loaded as an independent data point in BigQuery,
 to simplify both loading and querying.
 
-The monitoring script will be developed similarly to the
-["official" monitoring script](https://github.com/broadinstitute/cromwell/blob/develop/supportedBackends/google/pipelines/v2alpha1/src/main/resources/cromwell-monitor/monitor.py) from Cromwell repo.
+The monitoring image will be developed similarly to the
+["official" monitoring image](https://github.com/broadinstitute/cromwell/blob/develop/supportedBackends/google/pipelines/v2alpha1/src/main/resources/cromwell-monitor/monitor.py) from Cromwell repo.
 
 It would obtain all of the details for the table above from the internal
 [instance metadata endpoint](https://cloud.google.com/compute/docs/storing-retrieving-metadata),
@@ -38,34 +37,80 @@ as well as Compute Engine API and
 [environment variables](https://github.com/broadinstitute/cromwell/blob/develop/supportedBackends/google/pipelines/v2alpha1/src/main/scala/cromwell/backend/google/pipelines/v2alpha1/api/MonitoringAction.scala)
 assigned to the monitoring action by Cromwell.
 
-## Loading to GCS
+## Reporting to BigQuery
 
-The monitoring code will periodically aggregate all info
-into a file, and copy that file at the end of the operation
-into a `gs://<monitoring-bucket>/<bucket-prefix>/<instance-id>.csv` object on GCS.
+Ideally, we'd like to target 2 use cases by the proposed solution:
 
-The bucket name and prefix (e.g. `example-cromwell-executions-bucket` and `monitoring`)
-can be passed to the task through custom instance labels,
-`monitoring-bucket` and `monitoring-prefix`, defined through `google_labels`
-[workflow option](https://cromwell.readthedocs.io/en/stable/wf_options/Google/),
-which is available in Cromwell 41+.
+- querying historical data, with relaxed requirements
+  on the "freshness" of the results (e.g. waiting a day is OK);
+  however, it's crucial to retain all data
+  (perhaps with reduced glanularity over time)
 
-## Loading from GCS to BigQuery
+- near-realtime queries for interactive workflow development, where
+  a user wants to get feedback on the runtime performance of their
+  workflow right away (possibly even while the workflow is still running)
 
-[BigQuery Data Transfer Service for Cloud Storage](https://cloud.google.com/bigquery/docs/cloud-storage-transfer)
-will run on a schedule
-([API rate limit is 8h](https://cloud.google.com/bigquery/docs/reference/datatransfer/rest/v1/projects.locations.transferConfigs#TransferConfig)),
-and load all files from that bucket into a table in BigQuery
-(removing files from GCS afterwards to minimize costs). The table is
-[partitioned on the date](https://cloud.google.com/bigquery/docs/querying-partitioned-tables),
+Additionaly, we'd like to report these metrics in a _scalable_ way.
+Some cloud monitoring services enforce fairly
+low request limits (e.g. 6K RPM for Stackdriver),
+or keep only the most recent data (e.g. 6 weeks for Stackdriver),
+which are not compatible with requirements for
+high-throughput workflows used by some platforms at the Broad.
+
+At the same time, we can withstand occasional duplication or
+unavailability of recently loaded data,
+because we're only interested in trends and bulk statistics.
+
+Finally, the reported data should be easily exportable
+to any of a number of analytics tools,
+either from Google (BigQuery and now, Looker) or elsewhere.
+
+To address all of these points, we propose to use
+[streaming inserts for BigQuery](https://cloud.google.com/bigquery/streaming-data-into-bigquery),
+which were designed specifically for high-throughput loading
+of data. Such inserts tolerate rates as high as
+[100K RPS](https://cloud.google.com/bigquery/quotas#streaming_inserts)
+(6M RPM) per table/project, and are available for queries in near-realtime (typically,
+[seconds](https://cloud.google.com/bigquery/streaming-data-into-bigquery#dataavailability)).
+
+Using monitoring code, each Pipelines operation
+will insert one data point per minute
+(though we could make that configurable via a workflow option).
+It could use jitter in the time of submission of the request
+(not to be confused with the reported `timestamp`),
+to reduce the potential of running against the RPS limit.
+
+To be able to sumbit the `insertAll` request,
+the Pipelines jobs will have to be started with at least `bigquery.insertdata`
+[OAuth scope](https://cloud.google.com/bigquery/docs/reference/rest/v2/tabledata/insertAll#authorization-scopes).
+This will have to be implemented in Cromwell,
+either as a [static](https://github.com/broadinstitute/cromwell/blob/6d737b056aca1f3c56c0e7bc212267ea912812bc/supportedBackends/google/pipelines/v2alpha1/src/main/scala/cromwell/backend/google/pipelines/v2alpha1/GenomicsFactory.scala#L148-L156)
+or a [configurable](https://github.com/broadinstitute/cromwell/issues/4638) option.
+
+The BigQuery table will be [partitioned on the date](https://cloud.google.com/bigquery/docs/querying-partitioned-tables)
+from the `timestamp` column,
 to reduce costs of subsequent queries.
+This way, users will be able to query only a range of dates -
+today, this month, last quarter etc,
+and would be billed only for that range.
+BigQuery allows up to 4,000
+[partitions per table](https://cloud.google.com/bigquery/quotas#partitioned_tables),
+i.e. one could hold up to ~11 years (!) worth of monitoring data.
 
 ## Cost analysis
 
-We anticipate this data collection to amount to
+From the figure above, we anticipate this data collection to amount to
 ~1 GB of data per ~100K instance hours,
-reported with 1 minute granularity.
-Incremental monthly cost of storage in this example
-would be ~$0.02, and querying it ~$0.05
-(it may even fall within the
+reported at 1 minute granularity.
+The cost of [streaming inserts](https://cloud.google.com/bigquery/pricing#streaming_pricing)
+in this example would be ~$0.3, while
+incremental monthly cost of storage ~$0.02 (~$0.01 after 3 months),
+and querying it ~$0.005 (it may even fall within the
 [free tier](https://cloud.google.com/bigquery/pricing#free-tier)).
+
+So even though streaming inserts appear to be the biggest
+cost factor initially, they're still very cheap overall,
+compared to the amount spent on compute
+(~$0.01 for just 1 preemptible core-hour).
+As such, we don't expect monitoring
+to have any noticeable effect on the overall cloud bill.
