@@ -104,7 +104,7 @@ From the figure above, we anticipate this data collection to amount to
 reported at 1 minute granularity.
 The cost of [streaming inserts](https://cloud.google.com/bigquery/pricing#streaming_pricing)
 in this example would be ~$0.3, while
-incremental monthly cost of storage ~$0.02 (~$0.01 after 3 months),
+incremental monthly cost of storage ~$0.02 (or $0.01 after 3 months),
 and querying it ~$0.005 (it may even fall within the
 [free tier](https://cloud.google.com/bigquery/pricing#free-tier)).
 
