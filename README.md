@@ -97,6 +97,12 @@ BigQuery allows up to 4,000
 [partitions per table](https://cloud.google.com/bigquery/quotas#partitioned_tables),
 i.e. one could hold up to ~11 years (!) worth of monitoring data.
 
+BigQuery dataset and table names
+could be passed to the task through custom instance labels,
+`monitoring-dataset` and `monitoring-table`, defined through `google_labels`
+[workflow option](https://cromwell.readthedocs.io/en/stable/wf_options/Google/),
+which is available in Cromwell 41+.
+
 ## Cost analysis
 
 From the figure above, we anticipate this data collection to amount to
