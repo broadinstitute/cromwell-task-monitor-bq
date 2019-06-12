@@ -19,25 +19,28 @@ the task call attempt running on that instance.
 
 It would then report the static information once:
 
-| project_id | zone | instance_id | instance_type | workflow_id  | workflow_name | task_call_name | task_call_index | task_call_attempt | preemptible | cpu_count | mem_total_gb | disk_total_gb |
-| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| sample-project | us-east1-b | gce-instance-1234 | n1-standard-2 | 11910a69-aaf5-428a-aae0-0b3b41ef396c | ExampleWorkflow | Task_Hello | 1 | 2 | True | 2 | 7.5 | 25 |
+| project_id | zone | instance_id | instance_type | workflow_id  | workflow_name | task_call_name | task_call_index | task_call_attempt | preemptible | cpu_count | mem_total_GB | disks.type | disks.path | disks.total_GB |
+| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+| sample-project | us-east1-b | gce-instance-1234 | n1-standard-2 | 11910a69-aaf5-428a-aae0-0b3b41ef396c | ExampleWorkflow | Task_Hello | 1 | 2 | True | 2 | 7.5 | PERSISTENT_HDD | /cromwell_root | 25 |
+
+Here, `disks` is a nested repeated field that may specify multiple disks.
 
 Next, it will report aggregate runtime metrics at a regular interval (e.g. 1 minute):
 
-| timestamp_start | timestamp_end | instance_id | cpu_usage_percent.p50 | cpu_usage_percent.p75 | cpu_usage_percent.p95 | cpu_usage_percent.p99 | mem_usage_percent.p50 | mem_usage_percent.p75 | mem_usage_percent.p95 | mem_usage_percent.p99 | disk_size_usage_percent.p50 | disk_size_usage_percent.p75 | disk_size_usage_percent.p95 | disk_size_usage_percent.p99 | disk_read_iops.p50 | disk_read_iops.p75 | disk_read_iops.p95 | disk_read_iops.p99 | disk_write_iops.p50 | disk_write_iops.p75 | disk_write_iops.p95 | disk_write_iops.p99 |
-| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |  ------------- |
-| 2019-06-07T23:19:42.123456+00:00 | 2019-06-07T23:20:41.987654+00:00 | gce-instance-1234 |    25 | 60 | 75 | 80    |    60 | 70 | 85 | 90    |     20 | 25 | 30 | 35    |    100 | 100 | 150 | 175    |    200 | 200 | 250 | 300    |
+| timestamp_start | timestamp_end | instance_id | cpu_usage_percent.p50 | cpu_usage_percent.p75 | cpu_usage_percent.p95 | cpu_usage_percent.p99 | mem_usage_percent.p50 | mem_usage_percent.p75 | mem_usage_percent.p95 | mem_usage_percent.p99 | disks.path | disks.size_usage_percent.p50 | disks.size_usage_percent.p75 | disks.size_usage_percent.p95 | disks.size_usage_percent.p99 | disks.read_iops.p50 | disks.read_iops.p75 | disks.read_iops.p95 | disks.read_iops.p99 | disks.write_iops.p50 | disks.write_iops.p75 | disks.write_iops.p95 | disks.write_iops.p99 |
+| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |  ------------- |  ------------- |
+| 2019-06-07T23:19:42.123456+00:00 | 2019-06-07T23:20:41.987654+00:00 | gce-instance-1234 |    25 | 60 | 75 | 80    |    60 | 70 | 85 | 90    | /cromwell_root |     20 | 25 | 30 | 35    |    100 | 100 | 150 | 175    |    200 | 200 | 250 | 300    |
 
 Here, we follow
 [SRE best practices](https://landing.google.com/sre/sre-book/chapters/monitoring-distributed-systems/)
 to report percentiles instead of "regular" metrics,
 to more accurately capture the aggregate metrics and outliers across the reporting interval.
+The percentiles are reported through nested fields.
+
 The amount of data stored in this format is miniscule (~10KB / hour, when reporting one row per minute).
 
 The monitoring image will be developed similarly to the
 ["official" monitoring image](https://github.com/broadinstitute/cromwell/blob/develop/supportedBackends/google/pipelines/v2alpha1/src/main/resources/cromwell-monitor/monitor.py) from Cromwell repo.
-
 It would obtain all of the details for the tables above from the internal
 [instance metadata endpoint](https://cloud.google.com/compute/docs/storing-retrieving-metadata),
 Compute Engine API (instance labels), and
