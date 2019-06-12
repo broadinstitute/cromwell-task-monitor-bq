@@ -18,9 +18,10 @@ This container will collect information about
 the task call attempt running on that instance.
 
 It would then report the static information once:
+
 | project_id | zone | instance_id | instance_type | workflow_id  | workflow_name | task_call_name | task_call_index | task_call_attempt | preemptible | cpu_count | mem_total_gb | disk_total_gb |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| sample-project  | us-east1-b | gce-instance-1234 | n1-standard-2 | 11910a69-aaf5-428a-aae0-0b3b41ef396c | ExampleWorkflow | Task_Hello | 1 | 2 | True | 2 | 7.5 | 25 |
+| sample-project | us-east1-b | gce-instance-1234 | n1-standard-2 | 11910a69-aaf5-428a-aae0-0b3b41ef396c | ExampleWorkflow | Task_Hello | 1 | 2 | True | 2 | 7.5 | 25 |
 
 Next, it will report aggregate runtime metrics at a regular interval (e.g. 1 minute):
 
