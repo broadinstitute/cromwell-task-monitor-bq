@@ -42,10 +42,13 @@ The amount of data stored in this format is miniscule (~10KB / hour, when report
 The monitoring image will be developed similarly to the
 ["official" monitoring image](https://github.com/broadinstitute/cromwell/blob/develop/supportedBackends/google/pipelines/v2alpha1/src/main/resources/cromwell-monitor/monitor.py) from Cromwell repo.
 It would obtain all of the details for the tables above from the internal
-[instance metadata endpoint](https://cloud.google.com/compute/docs/storing-retrieving-metadata),
-Compute Engine API (instance labels), and
+[instance metadata endpoint](https://cloud.google.com/compute/docs/storing-retrieving-metadata) and
 [environment variables](https://github.com/broadinstitute/cromwell/blob/develop/supportedBackends/google/pipelines/v2alpha1/src/main/scala/cromwell/backend/google/pipelines/v2alpha1/api/MonitoringAction.scala)
 assigned to the monitoring action by Cromwell.
+
+Please note that this approach carefully avoids external API calls other than
+[tabledata.insertAll](https://cloud.google.com/bigquery/docs/reference/rest/v2/tabledata/insertAll),
+which becomes the only rate-limiting factor.
 
 ## Reporting to BigQuery
 
