@@ -19,11 +19,11 @@ the task call attempt running on that instance.
 
 It would then report the static information once:
 
-| project_id | zone | instance_id | instance_type | workflow_id  | workflow_name | task_call_name | task_call_index | task_call_attempt | preemptible | cpu_count | mem_total_GB | disks.type | disks.path | disks.total_GB |
-| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| sample-project | us-east1-b | gce-instance-1234 | n1-standard-2 | 11910a69-aaf5-428a-aae0-0b3b41ef396c | ExampleWorkflow | Task_Hello | 1 | 2 | True | 2 | 7.5 | PERSISTENT_HDD | /cromwell_root | 25 |
+| project_id | zone | instance_id | instance_type | workflow_id  | workflow_name | task_call_name | task_call_index | task_call_attempt | preemptible | cpu_count | mem_size_GB | disks.type | disks.path | disks.size_GB | inputs.type | inputs.key | inputs.value | inputs.size_GB |
+| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+| sample-project | us-east1-b | gce-instance-1234 | n1-standard-2 | 11910a69-aaf5-428a-aae0-0b3b41ef396c | ExampleWorkflow | Task_Hello | 1 | 2 | True | 2 | 7.5 | PERSISTENT_HDD | /cromwell_root | 25 | File | bam | gs://bucket/input.bam | 2.5 |
 
-Here, `disks` is a nested repeated field that may specify multiple disks.
+Here, `disks` and `inputs` are nested repeated fields that may contain multiple objects.
 
 Next, it will report aggregate runtime metrics at a regular interval (e.g. 1 minute):
 
