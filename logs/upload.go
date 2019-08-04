@@ -1,4 +1,4 @@
-package logs
+package upload
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	"cloud.google.com/go/functions/metadata"
 	"cloud.google.com/go/storage"
 )
 
@@ -40,15 +39,14 @@ func init() {
 	}
 }
 
-// StorageEvent is the payload of a Google Cloud Storage event.
-type StorageEvent struct {
-	Bucket   string          `json:"bucket"`
-	Path     string          `json:"name"`
-	Metadata StorageMetadata `json:"metadata"`
+// PubSubEvent is a PubSub message/event.
+type PubSubEvent struct {
+	Path       []byte           `json:"data"`
+	Attributes PubSubAttributes `json:"attributes"`
 }
 
-// StorageMetadata contains custom metadata for the Storage event
-type StorageMetadata struct {
+// PubSubAttributes contains attributes of a PubSub message.
+type PubSubAttributes struct {
 	Type LogType `json:"type"`
 }
 
@@ -63,15 +61,13 @@ const (
 
 // Upload receives a Storage event for monitoring.log,
 // fetches the log, parses it, and uploads results to BigQuery.
-func Upload(ctx context.Context, event StorageEvent) (err error) {
-	fmt.Printf("%+v", event)
-
-	call, err := ParseEvent(ctx, &event)
+func Upload(ctx context.Context, event PubSubEvent) (err error) {
+	call, err := ParseEvent(&event)
 	if err != nil || call == nil {
 		return
 	}
 
-	log, err := FetchLog(ctx, event.Bucket, event.Path)
+	log, err := FetchLog(ctx, call.bucket, call.object)
 	if err != nil {
 		return
 	}
@@ -81,7 +77,7 @@ func Upload(ctx context.Context, event StorageEvent) (err error) {
 		return
 	}
 
-	return UploadRows(ctx, data)
+	return InsertRows(ctx, data)
 }
 
 func parseRe(re *regexp.Regexp, s string) (matches map[string]string) {
@@ -99,12 +95,14 @@ func parseRe(re *regexp.Regexp, s string) (matches map[string]string) {
 }
 
 var pathRe = regexp.MustCompile(
-	`^(.*/)?(?P<workflowName>\w+)/(?P<workflowID>[0-9a-f\-]{36})/call-(?P<callName>\w+)(/shard-(?P<shard>\d+))?(/.*attempt-(?P<attempt>\d+))?/monitoring.log$`,
+	`^gs://(?P<bucket>[^/]+)/(?P<object>(.*/)?(?P<workflowName>\w+)/(?P<workflowID>[0-9a-f\-]{36})/call-(?P<callName>\w+)(/shard-(?P<shard>\d+))?(/.*attempt-(?P<attempt>\d+))?/monitoring.log)$`,
 )
 
 // TaskCall holds the parsed parameters of a Cromwell task call
 type TaskCall struct {
 	logType      LogType
+	bucket       string
+	object       string
 	workflowName string
 	workflowID   string
 	name         string
@@ -112,30 +110,14 @@ type TaskCall struct {
 	attempt      int
 }
 
-const (
-	objFinalize   = "google.storage.object.finalize"
-	objMetaUpdate = "google.storage.object.metadataUpdate"
-)
-
-// ParseEvent parses StorageEvent into TaskCall struct
+// ParseEvent parses PubSubEvent into TaskCall struct
 func ParseEvent(
-	ctx context.Context,
-	event *StorageEvent,
+	event *PubSubEvent,
 ) (
 	call *TaskCall,
 	err error,
 ) {
-	meta, err := metadata.FromContext(ctx)
-	if err != nil {
-		return
-	}
-	switch meta.EventType {
-	case objFinalize, objMetaUpdate:
-	default:
-		return
-	}
-
-	logType := event.Metadata.Type
+	logType := event.Attributes.Type
 	switch logType {
 	case EPI, HCA:
 	default:
@@ -143,14 +125,17 @@ func ParseEvent(
 		return
 	}
 
-	matches := parseRe(pathRe, event.Path)
+	path := string(event.Path)
+	matches := parseRe(pathRe, path)
 	if matches == nil {
-		err = fmt.Errorf("%s is not a valid path to monitoring.log", event.Path)
+		err = fmt.Errorf("%s is not a valid path to monitoring.log", path)
 		return
 	}
 
 	call = &TaskCall{
-		logType:      event.Metadata.Type,
+		logType:      logType,
+		bucket:       matches["bucket"],
+		object:       matches["object"],
 		workflowName: matches["workflowName"],
 		workflowID:   matches["workflowID"],
 		name:         matches["callName"],
@@ -345,8 +330,8 @@ func GetInserter(
 
 const maxRows = 10000
 
-// UploadRows uploads data points to BigQuery
-func UploadRows(
+// InsertRows uploads data points to BigQuery
+func InsertRows(
 	ctx context.Context,
 	data []*MonitorPoint,
 ) (

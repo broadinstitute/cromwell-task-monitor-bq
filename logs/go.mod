@@ -1,4 +1,4 @@
-module github.com/broadinstitute/cromwell-task-monitor-bbq/initial_load
+module github.com/broadinstitute/cromwell-task-monitor-bbq/logs
 
 go 1.11
 
