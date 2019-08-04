@@ -155,6 +155,7 @@ func ParseEvent(
 		workflowID:   matches["workflowID"],
 		name:         matches["callName"],
 		shard:        -1,
+		attempt:      1,
 	}
 
 	shard := matches["shard"]
