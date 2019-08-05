@@ -174,7 +174,9 @@ type Call struct {
 		MachineType string `json:"machineType"`
 	} `json:"jes"`
 	RuntimeAttributes struct {
-		Disks string `json:"disks"`
+		CPU    string `json:"cpu"`
+		Memory string `json:"memory"`
+		Disks  string `json:"disks"`
 	} `json:"runtimeAttributes"`
 	Inputs      `json:"inputs"`
 	SubWorkflow Workflow `json:"subWorkflowMetadata"`
@@ -365,25 +367,39 @@ type BQInput struct {
 }
 
 func parseRuntime(call *Call) (r *Runtime, err error) {
-	if len(call.Jes.MachineType) == 0 {
+	machineType := call.Jes.MachineType
+	if machineType == "" {
 		return
 	}
-	machine := strings.Split(call.Jes.MachineType, "-")
-	if machine[0] != "custom" {
-		err = fmt.Errorf("Unknown machine type: '%s'", machine)
-		return
+	var (
+		cpu int
+		mem float64
+	)
+	runtime := call.RuntimeAttributes
+	machine := strings.Split(machineType, "-")
+	if machine[0] == "custom" {
+		cpu, err = strconv.Atoi(machine[1])
+		if err != nil {
+			return
+		}
+		mem, err = strconv.ParseFloat(machine[2], 64)
+		if err != nil {
+			return
+		}
+		mem /= 1024
+	} else {
+		cpu, err = strconv.Atoi(runtime.CPU)
+		if err != nil {
+			return
+		}
+		memory := strings.Split(runtime.Memory, " ")
+		mem, err = strconv.ParseFloat(memory[0], 64)
+		if err != nil {
+			return
+		}
 	}
 
-	cpu, err := strconv.Atoi(machine[1])
-	if err != nil {
-		return
-	}
-	mem, err := strconv.ParseFloat(machine[2], 64)
-	if err != nil {
-		return
-	}
-	mem /= 1024
-	disks := strings.Split(call.RuntimeAttributes.Disks, " ")
+	disks := strings.Split(runtime.Disks, " ")
 	disk, err := strconv.ParseFloat(disks[1], 64)
 	if err != nil {
 		return
