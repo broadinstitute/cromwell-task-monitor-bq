@@ -274,7 +274,10 @@ func parseRows(
 							f := &file.Value
 							size, err := getGcsSize(ctx, f.StringVal)
 							if err != nil {
-								if strings.Contains(err.Error(), "exist") {
+								if getStatus(err) == http.StatusForbidden {
+									fmt.Println(err)
+									f.Valid = false
+								} else if strings.Contains(err.Error(), "doesn't exist") {
 									f.Valid = false
 								} else {
 									errs <- fmt.Errorf("%s: %s", f.StringVal, err.Error())
@@ -502,12 +505,19 @@ func getInserter(
 		Schema: schema,
 	})
 	if err != nil {
-		if e, ok := err.(*googleapi.Error); ok && e.Code != http.StatusConflict {
+		if getStatus(err) != http.StatusConflict {
 			return
 		}
 		err = nil
 	}
 	inserter = bq.Dataset(datasetID).Table(tableID).Inserter()
+	return
+}
+
+func getStatus(err error) (status int) {
+	if e, ok := err.(*googleapi.Error); ok {
+		status = e.Code
+	}
 	return
 }
 
