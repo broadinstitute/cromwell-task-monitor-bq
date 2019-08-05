@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -11,15 +12,21 @@ import (
 )
 
 func TestUpload(t *testing.T) {
-	event := StorageEvent{
-		fmt.Sprintf("workflow.%s.log", os.Getenv("WORKFLOW_ID")),
-	}
+
 	cachedToken = CachedToken{
 		os.Getenv("TOKEN"),
 		time.Now().Add(time.Second * tokenLifetimeSec),
 	}
-	if err := Upload(getContext(), event); err != nil {
-		t.Error(err)
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		workflowID := scanner.Text()
+		event := StorageEvent{
+			fmt.Sprintf("workflow.%s.log", workflowID),
+		}
+		if err := Upload(getContext(), event); err != nil {
+			t.Error(err)
+		}
 	}
 }
 
