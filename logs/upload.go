@@ -95,7 +95,7 @@ func parseRe(re *regexp.Regexp, s string) (matches map[string]string) {
 }
 
 var pathRe = regexp.MustCompile(
-	`^gs://(?P<bucket>[^/]+)/(?P<object>(.*/)?(?P<workflowName>\w+)/(?P<workflowID>[0-9a-f\-]{36})/call-(?P<callName>\w+)(/shard-(?P<shard>\d+))?(/.*attempt-(?P<attempt>\d+))?/monitoring.log)$`,
+	`^gs://(?P<bucket>[^/]+)/(?P<object>(.*/)?(?P<workflowName>[.\w]+)/(?P<workflowID>[0-9a-f\-]{36})/call-(?P<callName>\w+)(/shard-(?P<shard>\d+))?(/.*attempt-(?P<attempt>\d+))?/monitoring.log)$`,
 )
 
 // TaskCall holds the parsed parameters of a Cromwell task call
