@@ -3,3 +3,5 @@
 *.sh
 *.txt
 *_test.go
+
+main.go

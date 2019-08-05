@@ -1,32 +1,21 @@
 package metadata
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"cloud.google.com/go/functions/metadata"
 )
 
 func TestUpload(t *testing.T) {
-
-	cachedToken = CachedToken{
-		os.Getenv("TOKEN"),
-		time.Now().Add(time.Second * tokenLifetimeSec),
+	event := StorageEvent{
+		fmt.Sprintf("workflow.%s.log", os.Getenv("WORKFLOW_ID")),
 	}
-
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		workflowID := scanner.Text()
-		event := StorageEvent{
-			fmt.Sprintf("workflow.%s.log", workflowID),
-		}
-		if err := Upload(getContext(), event); err != nil {
-			t.Error(err)
-		}
+	SetCachedToken(os.Getenv("TOKEN"))
+	if err := Upload(getContext(), event); err != nil {
+		t.Error(err)
 	}
 }
 

@@ -209,10 +209,14 @@ func getAccessToken() (token string, err error) {
 	}
 
 	token = t.AccessToken
+	SetCachedToken(token)
+	return
+}
+
+// SetCachedToken sets up the token cache
+func SetCachedToken(token string) {
 	cachedToken.Value = token
 	cachedToken.ExpiresAt = time.Now().Add(time.Second * tokenLifetimeSec)
-
-	return
 }
 
 // Token respresents response from instance metadata endpoint
