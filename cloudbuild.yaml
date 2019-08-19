@@ -3,10 +3,13 @@ substitutions:
   _IMAGE: cromwell-task-monitor-bq
 
 steps:
-- name: 'gcr.io/kaniko-project/executor'
+- name: gcr.io/cloud-builders/docker
+  entrypoint: bash
   dir: monitor
-  args: [
-    '--cache',
-    '--cache-ttl=24h',
-    '--destination=${_REGISTRY}/${PROJECT_ID}/${_IMAGE}',
-  ]
+  args:
+  - -c
+  - |
+    set -e
+    export IMAGE=${_REGISTRY}/${PROJECT_ID}/${_IMAGE}
+    docker build -t $${IMAGE} .
+    docker push $${IMAGE}
