@@ -4,6 +4,7 @@ substitutions:
 
 steps:
 - name: 'gcr.io/kaniko-project/executor'
+  dir: monitor
   args: [
     '--cache',
     '--cache-ttl=24h',
