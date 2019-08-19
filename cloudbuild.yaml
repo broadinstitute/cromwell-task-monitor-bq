@@ -1,0 +1,11 @@
+substitutions:
+  _REGISTRY: us.gcr.io
+  _IMAGE: cromwell-task-monitor-bq
+
+steps:
+- name: 'gcr.io/kaniko-project/executor'
+  args: [
+    '--cache',
+    '--cache-ttl=24h',
+    '--destination=${_REGISTRY}/${PROJECT_ID}/${_IMAGE}',
+  ]
