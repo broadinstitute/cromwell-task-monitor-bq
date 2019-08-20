@@ -15,7 +15,7 @@ Finally, it creates both the dataset and the tables
 if they don't exist yet.
 
 As a result, this code can be run without any
-parameters, either as `monitoring_script` on PAPIv1/v2,
-or as `monitoring_image` on PAPIv2. In the latter case,
+parameters, either as `monitoring_script`,
+or `monitoring_image` on PAPIv2. In the latter case,
 it will additionally record workflow ID and task call identifiers
 (which are passed to it through env vars by the Cromwell backend).
