@@ -171,7 +171,8 @@ type Call struct {
 	Attempt         int    `json:"attempt"`
 	Preemptible     bool   `json:"preemptible"`
 	Jes             struct {
-		MachineType string `json:"machineType"`
+		InstanceName string `json:"instanceName"`
+		MachineType  string `json:"machineType"`
 	} `json:"jes"`
 	RuntimeAttributes struct {
 		CPU    string `json:"cpu"`
@@ -314,6 +315,7 @@ func parseRows(
 				})
 
 				row := &Row{
+					InstanceName:    call.Jes.InstanceName,
 					WorkflowName:    workflow.Name,
 					WorkflowID:      workflow.ID,
 					CallName:        matches[2],
@@ -347,6 +349,7 @@ var callRe = regexp.MustCompile(`^\w+(\.(\w+))?$`)
 
 // Row is table row to be uploaded to BigQuery
 type Row struct {
+	InstanceName    string     `bigquery:"instance_name"`
 	WorkflowName    string     `bigquery:"workflow_name"`
 	WorkflowID      string     `bigquery:"workflow_id"`
 	CallName        string     `bigquery:"task_call_name"`
