@@ -179,10 +179,12 @@ type Call struct {
 		InstanceName  string `json:"instanceName"`
 		MachineType   string `json:"machineType"`
 	} `json:"jes"`
-	Preemptible       bool   `json:"preemptible"`
-	Shard             int    `json:"shardIndex"`
-	Attempt           int    `json:"attempt"`
-	ExecutionStatus   string `json:"executionStatus"`
+	Preemptible       bool      `json:"preemptible"`
+	Shard             int       `json:"shardIndex"`
+	Attempt           int       `json:"attempt"`
+	Start             time.Time `json:"start"`
+	End               time.Time `json:"end"`
+	ExecutionStatus   string    `json:"executionStatus"`
 	RuntimeAttributes struct {
 		CPU    string `json:"cpu"`
 		Memory string `json:"memory"`
@@ -334,6 +336,8 @@ func parseRows(
 					CallName:        matches[2],
 					Shard:           call.Shard,
 					Attempt:         call.Attempt,
+					StartTime:       call.Start,
+					EndTime:         call.End,
 					ExecutionStatus: call.ExecutionStatus,
 					CPUCount:        runtime.CPUCount,
 					MemTotalGB:      runtime.MemTotalGB,
@@ -370,6 +374,8 @@ type Row struct {
 	CallName        string     `bigquery:"task_call_name"`
 	Shard           int        `bigquery:"shard"`
 	Attempt         int        `bigquery:"attempt"`
+	StartTime       time.Time  `bigquery:"start_time"`
+	EndTime         time.Time  `bigquery:"end_time"`
 	ExecutionStatus string     `bigquery:"execution_status"`
 	CPUCount        int        `bigquery:"cpu_count"`
 	MemTotalGB      float64    `bigquery:"mem_total_gb"`
@@ -560,14 +566,15 @@ func getInserter(
 	if err != nil {
 		return
 	}
-	err = table.Create(ctx, &bigquery.TableMetadata{
-		Schema: schema,
-	})
-	if err != nil {
-		if getStatus(err) != http.StatusConflict {
-			return
-		}
-		err = nil
+	_, err = table.Metadata(ctx)
+	if getStatus(err) == http.StatusNotFound {
+		err = table.Create(ctx, &bigquery.TableMetadata{
+			Schema: schema,
+			TimePartitioning: &bigquery.TimePartitioning{
+				Field:                  "start_time",
+				RequirePartitionFilter: true,
+			},
+		})
 	}
 	inserter = bq.Dataset(datasetID).Table(tableID).Inserter()
 	return

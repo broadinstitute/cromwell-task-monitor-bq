@@ -19,7 +19,7 @@ the task call attempt running on that instance.
 
 First, it reports the _static_ information into `runtime` table in BigQuery:
 
-| project_id | zone | instance_id | instance_name | preemptible | workflow_id  | task_call_name | shard | attempt | cpu_count | cpu_platform | mem_total_gb | disk_mounts | disk_total_gb | timestamp |
+| project_id | zone | instance_id | instance_name | preemptible | workflow_id  | task_call_name | shard | attempt | cpu_count | cpu_platform | mem_total_gb | disk_mounts | disk_total_gb | start_time |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
 | sample-project | us-east1-b | 1234567890123456789 | gce-instance-1234 | true | 11910a69-aaf5-428a-aae0-0b3b41ef396c | Task_Hello | 1 | 2 | 2 | Intel Haswell | 7.5 | [/cromwell_root, /mnt/disk2] | [50.5, 25.2] | 2019-01-01 01:00:00.123456 UTC |
 
@@ -58,7 +58,7 @@ the Pipelines jobs have to be started with `bigquery`
 which is implemented in [*Cromwell 43+*](https://github.com/broadinstitute/cromwell/releases/tag/43).
 
 The BigQuery tables are [partitioned on the date](https://cloud.google.com/bigquery/docs/querying-partitioned-tables)
-from the `timestamp` column.
+from the `timestamp` or `start_time` columns.
 Users then query a range of dates -
 today, this month, last quarter etc,
 and are billed only for that range.
@@ -81,9 +81,9 @@ and asks Cromwell for task-level workflow metadata with that `workflow_id`.
 
 Finally, the function records this information into `metadata` table in BigQuery:
 
-| project_id | zone | instance_name | preemptible | workflow_name | workflow_id | task_call_name | shard | attempt | execution_status | cpu_count | mem_total_gb | disk_mounts | disk_total_gb | disk_types | docker_image | inputs.key | inputs.type | inputs.value |
-| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
-| sample-project | us-east1-b | gce-instance-1234 | true | SampleWorkflow | 11910a69-aaf5-428a-aae0-0b3b41ef396c | Task_Hello | 1 | 2 | Done | 2 | 7.5 | [/cromwell_root, /mnt/disk2] | [51, 25] | [HDD, SSD] | example/image@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 | [bam] | [file] | [23.5] |
+| project_id | zone | instance_name | preemptible | workflow_name | workflow_id | task_call_name | shard | attempt | start_time | end_time | execution_status | cpu_count | mem_total_gb | disk_mounts | disk_total_gb | disk_types | docker_image | inputs.key | inputs.type | inputs.value |
+| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+| sample-project | us-east1-b | gce-instance-1234 | true | SampleWorkflow | 11910a69-aaf5-428a-aae0-0b3b41ef396c | Task_Hello | 1 | 2 | 2019-01-01 00:01:00.123789 UTC | 2019-01-01 02:00:00.789456 UTC | Done | 2 | 7.5 | [/cromwell_root, /mnt/disk2] | [51, 25] | [HDD, SSD] | example/image@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 | [bam] | [file] | [23.5] |
 
 Notice that some information is stored redundantly, when compared to the `runtime` table from above.
 This is done intentionally, to make each table easier to query and make it useful even on itself

@@ -190,12 +190,12 @@ func init() {
 		return
 	}
 
-	runtimeInserter, err = getInserter(ctx, bq, datasetID, runtimeTableID, Runtime{})
+	runtimeInserter, err = getInserter(ctx, bq, datasetID, runtimeTableID, Runtime{}, "start_time")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	metricsInserter, err = getInserter(ctx, bq, datasetID, metricsTableID, Metric{})
+	metricsInserter, err = getInserter(ctx, bq, datasetID, metricsTableID, Metric{}, "timestamp")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -218,6 +218,7 @@ func getInserter(
 	datasetID string,
 	tableID string,
 	dataType interface{},
+	partitionField string,
 ) (
 	inserter *bigquery.Inserter,
 	err error,
@@ -241,7 +242,7 @@ func getInserter(
 		err = table.Create(ctx, &bigquery.TableMetadata{
 			Schema: schema,
 			TimePartitioning: &bigquery.TimePartitioning{
-				Field:                  "timestamp",
+				Field:                  partitionField,
 				RequirePartitionFilter: true,
 			},
 		})
@@ -339,7 +340,7 @@ func runtime(ctx context.Context) (
 		MemTotalGB:   toGB(memStat.Total),
 		DiskMounts:   diskMounts,
 		DiskTotalGB:  diskTotal,
-		Timestamp:    time.Now(),
+		StartTime:    time.Now(),
 	}
 	return runtimeInserter.Put(ctx, []*Runtime{r})
 }
@@ -519,7 +520,7 @@ type Runtime struct {
 	MemTotalGB   float64             `bigquery:"mem_total_gb"`
 	DiskMounts   []string            `bigquery:"disk_mounts"`
 	DiskTotalGB  []float64           `bigquery:"disk_total_gb"`
-	Timestamp    time.Time           `bigquery:"timestamp"`
+	StartTime    time.Time           `bigquery:"start_time"`
 }
 
 // Metric contains a single row of stats reported to BigQuery
