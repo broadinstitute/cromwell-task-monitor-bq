@@ -173,14 +173,16 @@ type Calls map[string][]Call
 // Call contains metadata for
 // a Cromwell task call or subworkflow
 type Call struct {
-	ExecutionStatus string `json:"executionStatus"`
-	Shard           int    `json:"shardIndex"`
-	Attempt         int    `json:"attempt"`
-	Preemptible     bool   `json:"preemptible"`
-	Jes             struct {
-		InstanceName string `json:"instanceName"`
-		MachineType  string `json:"machineType"`
+	Jes struct {
+		GoogleProject string `json:"googleProject"`
+		Zone          string `json:"zone"`
+		InstanceName  string `json:"instanceName"`
+		MachineType   string `json:"machineType"`
 	} `json:"jes"`
+	Preemptible       bool   `json:"preemptible"`
+	Shard             int    `json:"shardIndex"`
+	Attempt           int    `json:"attempt"`
+	ExecutionStatus   string `json:"executionStatus"`
 	RuntimeAttributes struct {
 		CPU    string `json:"cpu"`
 		Memory string `json:"memory"`
@@ -322,20 +324,21 @@ func parseRows(
 				})
 
 				row := &Row{
+					ProjectID:       call.Jes.GoogleProject,
+					Zone:            call.Jes.Zone,
 					InstanceName:    call.Jes.InstanceName,
+					Preemptible:     call.Preemptible,
 					WorkflowName:    workflow.Name,
 					WorkflowID:      workflow.ID,
 					CallName:        matches[2],
-					ExecutionStatus: call.ExecutionStatus,
 					Shard:           call.Shard,
 					Attempt:         call.Attempt,
-					Preemptible:     call.Preemptible,
-					CPU:             runtime.CPU,
-					Mem:             runtime.Mem,
-					MemUnit:         "G",
-					Disk:            runtime.Disk,
-					DiskUnit:        "G",
-					DiskType:        runtime.DiskType,
+					ExecutionStatus: call.ExecutionStatus,
+					CPUCount:        runtime.CPUCount,
+					MemTotalGB:      runtime.MemTotalGB,
+					DiskMounts:      runtime.DiskMounts,
+					DiskTotalGB:     runtime.DiskTotalGB,
+					DiskTypes:       runtime.DiskTypes,
 					Inputs:          inputs,
 				}
 				rows = append(rows, row)
@@ -356,20 +359,21 @@ var callRe = regexp.MustCompile(`^\w+(\.(\w+))?$`)
 
 // Row is table row to be uploaded to BigQuery
 type Row struct {
+	ProjectID       string     `bigquery:"project_id"`
+	Zone            string     `bigquery:"zone"`
 	InstanceName    string     `bigquery:"instance_name"`
+	Preemptible     bool       `bigquery:"preemptible"`
 	WorkflowName    string     `bigquery:"workflow_name"`
 	WorkflowID      string     `bigquery:"workflow_id"`
 	CallName        string     `bigquery:"task_call_name"`
-	ExecutionStatus string     `bigquery:"execution_status"`
 	Shard           int        `bigquery:"shard"`
 	Attempt         int        `bigquery:"attempt"`
-	Preemptible     bool       `bigquery:"preemptible"`
-	CPU             int        `bigquery:"cpu"`
-	Mem             float64    `bigquery:"mem"`
-	MemUnit         string     `bigquery:"mem_unit"`
-	Disk            float64    `bigquery:"disk"`
-	DiskUnit        string     `bigquery:"disk_unit"`
-	DiskType        string     `bigquery:"disk_type"`
+	ExecutionStatus string     `bigquery:"execution_status"`
+	CPUCount        int        `bigquery:"cpu_count"`
+	MemTotalGB      float64    `bigquery:"mem_total_gb"`
+	DiskMounts      []string   `bigquery:"disk_mounts"`
+	DiskTotalGB     []float64  `bigquery:"disk_total_gb"`
+	DiskTypes       []string   `bigquery:"disk_types"`
 	Inputs          []*BQInput `bigquery:"inputs"`
 }
 
@@ -413,25 +417,47 @@ func parseRuntime(call *Call) (r *Runtime, err error) {
 		}
 	}
 
-	disks := strings.Split(runtime.Disks, " ")
-	disk, err := strconv.ParseFloat(disks[1], 64)
-	if err != nil {
-		return
+	disks := strings.Split(runtime.Disks, ", ")
+	nDisks := len(disks)
+	diskMounts := make([]string, nDisks)
+	diskTotalGB := make([]float64, nDisks)
+	diskTypes := make([]string, nDisks)
+
+	for i, disk := range disks {
+		d := strings.Split(disk, " ")
+		if len(d) < 3 {
+			return nil, fmt.Errorf("Unable to parse disk metadata from %s", disk)
+		}
+
+		diskType := d[2]
+		diskTypes[i] = diskType
+
+		diskMount := d[0]
+		if diskMount == "local-disk" {
+			diskMount = "/cromwell_root"
+		}
+		diskMounts[i] = diskMount
+
+		diskSizeGB, err := strconv.ParseFloat(d[1], 64)
+		if err != nil {
+			return nil, err
+		} else if diskType == "LOCAL" {
+			diskSizeGB = 375
+		}
+		diskTotalGB[i] = diskSizeGB
 	}
-	if disks[2] == "LOCAL" {
-		disk = 375
-	}
-	diskType := disks[2]
-	r = &Runtime{cpu, mem, disk, diskType}
+
+	r = &Runtime{cpu, mem, diskMounts, diskTotalGB, diskTypes}
 	return
 }
 
 // Runtime represents task call runtime attributes
 type Runtime struct {
-	CPU      int
-	Mem      float64
-	Disk     float64
-	DiskType string
+	CPUCount    int
+	MemTotalGB  float64
+	DiskMounts  []string
+	DiskTotalGB []float64
+	DiskTypes   []string
 }
 
 func parseInputs(
