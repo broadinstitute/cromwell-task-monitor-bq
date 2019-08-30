@@ -29,10 +29,10 @@ steps:
     '-c', '
       bq mk -f --dataset ${_DATASET_ID} &&
       bq show --format json ${_DATASET_ID} |
-        jq -r '.access |= (.+ [{
+        jq -r ".access |= (.+ [{
           role: "WRITER",
           userByEmail: "${_CROMWELL_SERVICE_ACCOUNT}"
-        }] | unique)'
+        }] | unique)"
         > dataset.json &&
       bq update --source dataset.json ${_DATASET_ID} &&
 
