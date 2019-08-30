@@ -1,6 +1,10 @@
+ARG DIST="/opt"
+
 FROM golang:alpine AS build
 
-WORKDIR /opt
+ARG DIST
+
+WORKDIR ${DIST}
 
 RUN apk add git
 
@@ -13,13 +17,15 @@ RUN go build
 
 FROM alpine
 
-ARG USER=monitor
+ARG DIST
+ARG DATASET_ID="cromwell_monitoring"
 
-RUN apk add --no-cache ca-certificates && \
-    adduser -SH ${USER}
+RUN apk add --no-cache ca-certificates
 
-COPY --from=build /opt/monitor /usr/local/bin
+ENV DATASET_ID=${DATASET_ID}
 
-USER ${USER}
+COPY --from=build ${DIST}/monitor /usr/local/bin
+
+USER nobody
 
 ENTRYPOINT ["monitor"]

@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	defaultDatasetID      = "cromwell_monitoring"
 	defaultMetricsTableID = "metrics"
 	defaultRuntimeTableID = "runtime"
 
@@ -170,7 +169,7 @@ func init() {
 
 	datasetID, ok := os.LookupEnv(envDatasetID)
 	if !ok {
-		datasetID = defaultDatasetID
+		log.Fatalf("%s is not defined", envDatasetID)
 	}
 
 	metricsTableID, ok := os.LookupEnv(envMetricsTableID)
