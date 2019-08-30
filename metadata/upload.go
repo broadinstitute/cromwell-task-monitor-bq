@@ -188,8 +188,9 @@ type Call struct {
 		Memory string `json:"memory"`
 		Disks  string `json:"disks"`
 	} `json:"runtimeAttributes"`
-	Inputs      `json:"inputs"`
-	SubWorkflow Workflow `json:"subWorkflowMetadata"`
+	DockerImageUsed string `json:"dockerImageUsed"`
+	Inputs          `json:"inputs"`
+	SubWorkflow     Workflow `json:"subWorkflowMetadata"`
 }
 
 // Inputs contains task/subworkflow inputs
@@ -339,6 +340,7 @@ func parseRows(
 					DiskMounts:      runtime.DiskMounts,
 					DiskTotalGB:     runtime.DiskTotalGB,
 					DiskTypes:       runtime.DiskTypes,
+					DockerImage:     call.DockerImageUsed,
 					Inputs:          inputs,
 				}
 				rows = append(rows, row)
@@ -374,6 +376,7 @@ type Row struct {
 	DiskMounts      []string   `bigquery:"disk_mounts"`
 	DiskTotalGB     []float64  `bigquery:"disk_total_gb"`
 	DiskTypes       []string   `bigquery:"disk_types"`
+	DockerImage     string     `bigquery:"docker_image"`
 	Inputs          []*BQInput `bigquery:"inputs"`
 }
 
