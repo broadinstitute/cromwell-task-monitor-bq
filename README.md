@@ -55,7 +55,7 @@ of data. Such inserts tolerate rates as high as
 To use streaming inserts,
 the Pipelines jobs have to be started with `bigquery`
 [OAuth scope](https://cloud.google.com/bigquery/docs/reference/rest/v2/tabledata/insertAll#authorization-scopes),
-which is implemented in [*Cromwell 43+*](https://github.com/broadinstitute/cromwell/releases/tag/43).
+which is implemented in [**Cromwell 43+**](https://github.com/broadinstitute/cromwell/releases/tag/43).
 
 The BigQuery tables are [partitioned on the date](https://cloud.google.com/bigquery/docs/querying-partitioned-tables)
 from the `timestamp` or `start_time` columns.
@@ -86,13 +86,13 @@ Finally, the function records this information into `metadata` table in BigQuery
 | sample-project | us-east1-b | gce-instance-1234 | true | SampleWorkflow | 11910a69-aaf5-428a-aae0-0b3b41ef396c | Task_Hello | 1 | 2 | 2019-01-01 00:01:00.123789 UTC | 2019-01-01 02:00:00.789456 UTC | Done | 2 | 7.5 | [/cromwell_root, /mnt/disk2] | [51, 25] | [HDD, SSD] | example/image@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 | [bam] | [file] | [23.5] |
 
 Notice that some information is stored redundantly, when compared to the `runtime` table from above.
-This is done intentionally, to make each table easier to query and make it useful even on itself
+This is done intentionally, to make each table easier to query and make it useful even on its own
 (in addition, some numbers may be reported differently by Cromwell and its task instances).
 
 However, the true power of this table comes from the `inputs` structure,
 which stores information about task call-level inputs, in a way that
-enables building _predictive models_ for how much of resource type
-we should allocate, given certain inputs.
+enables building _predictive models_ for how much of each resource type
+(cpu, disk, memory) we should allocate, given certain inputs.
 
 For inputs of `file` type, it reports only the _size_ of the file in GB.
 This approach enables building simple yet accurate models that could then
