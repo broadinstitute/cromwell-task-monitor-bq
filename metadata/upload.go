@@ -25,10 +25,10 @@ import (
 const tokenLifetimeSec = 3000
 
 var (
-	cromwellBaseURI = os.Getenv("CROMWELL_BASEURI")
-	projectID       = os.Getenv("PROJECT_ID")
+	cromwellBaseURL = os.Getenv("CROMWELL_BASEURL")
+	projectID       = os.Getenv("GCP_PROJECT")
 	datasetID       = os.Getenv("DATASET_ID")
-	tableID         = os.Getenv("TABLE_ID")
+	tableID         = getEnv("TABLE_ID", "metadata")
 )
 
 var httpClient *http.Client
@@ -53,6 +53,13 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getEnv(key, defaultValue string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return defaultValue
 }
 
 // Upload is a Cloud Function that triggers on a Storage Object event
@@ -120,7 +127,7 @@ func getWorkflow(id string) (workflow *Workflow, err error) {
 		return
 	}
 
-	uri := fmt.Sprintf("%s/api/workflows/v1/%s/metadata", cromwellBaseURI, id)
+	uri := fmt.Sprintf("%s/api/workflows/v1/%s/metadata", cromwellBaseURL, id)
 	req, err := http.NewRequest("GET", uri, nil)
 
 	req.Header.Add("Authorization", "Bearer "+token)
