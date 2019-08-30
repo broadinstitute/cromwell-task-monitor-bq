@@ -5,7 +5,7 @@ substitutions:
   _DATASET_ID: cromwell_monitoring
   _CROMWELL_BASEURL: '' # e.g. https://cromwell.example.org
   _CROMWELL_LOGS_BUCKET: '' # e.g. final-workflow-logs
-  _CROMWELL_SERVICE_ACCOUNT: 'cromwell-metadata-uploader'
+  _CROMWELL_SERVICE_ACCOUNT: '' # e.g. cromwell-metadata-uploader@project.iam.gserviceaccount.com
 
 steps:
 - name: gcr.io/cloud-builders/docker
@@ -25,20 +25,16 @@ steps:
   dir: metadata
   env:
   - FUNCTION=cromwell-metadata-upload
-  - SA_EMAIL=${_CROMWELL_SERVICE_ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com
   args: [
   - -c
   - |
     set -e
 
-    gcloud iam service-accounts create ${_CROMWELL_SERVICE_ACCOUNT}
-      --display-name "Client for Cromwell Metadata Uploader Cloud Function" || true
-
     bq mk -f --dataset ${_DATASET_ID}
     bq show --format json ${_DATASET_ID} |
       jq -r '.access |= (.+ [{
         role: "WRITER",
-        userByEmail: "$${SA_EMAIL}"
+        userByEmail: "${_CROMWELL_SERVICE_ACCOUNT}"
       }] | unique)'
       > dataset.json
     bq update --source dataset.json ${_DATASET_ID}
@@ -47,7 +43,7 @@ steps:
       --runtime go111
       --region ${_REGION}
       --trigger-bucket ${_CROMWELL_LOGS_BUCKET}
-      --service-account $${SA_EMAIL}
+      --service-account ${_CROMWELL_SERVICE_ACCOUNT}
       --set-env-vars DATASET_ID=${_DATASET_ID},CROMWELL_BASEURL=${_CROMWELL_BASEURL}
       --memory 128MB
   ]
