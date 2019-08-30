@@ -25,7 +25,7 @@ steps:
   dir: metadata
   env:
   - FUNCTION=cromwell-metadata-upload
-  args: [
+  args:
   - -c
   - |
     set -e
