@@ -481,7 +481,7 @@ func parseInputs(
 	case nil:
 		t = "null"
 	case bool:
-		t = "bool"
+		t = "boolean"
 		value = fmt.Sprintf("%t", v)
 	case float64:
 		t = "number"
