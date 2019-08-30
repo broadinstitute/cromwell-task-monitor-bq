@@ -55,6 +55,7 @@ var (
 	bq                               *bigquery.Client
 	metricsInserter, runtimeInserter *bigquery.Inserter
 
+	projectID                       string
 	instanceID                      int64
 	instanceName, zone, cpuPlatform string
 	preemptible                     bool
@@ -160,7 +161,7 @@ func init() {
 		log.Fatal(envReportIntervalMs, err)
 	}
 
-	projectID, ok := os.LookupEnv(envProjectID)
+	projectID, ok = os.LookupEnv(envProjectID)
 	if !ok {
 		if projectID, err = metadata.ProjectID(); err != nil {
 			log.Fatal(envProjectID, err)
@@ -324,17 +325,19 @@ func runtime(ctx context.Context) (
 		diskTotal[i] = toGB(stat.Total)
 	}
 	r := &Runtime{
+		ProjectID:    projectID,
+		Zone:         zone,
 		InstanceID:   instanceID,
 		InstanceName: instanceName,
-		Zone:         zone,
 		Preemptible:  preemptible,
 		WorkflowID:   workflowID,
 		TaskCallName: taskCallName,
 		Shard:        taskCallIndex,
 		Attempt:      taskCallAttempt,
-		CPU:          cpuCount,
+		CPUCount:     cpuCount,
 		CPUPlatform:  cpuPlatform,
 		MemTotalGB:   toGB(memStat.Total),
+		DiskMounts:   diskMounts,
 		DiskTotalGB:  diskTotal,
 		Timestamp:    time.Now(),
 	}
@@ -502,17 +505,19 @@ func report(
 
 // Runtime contains a row of runtime attributes in BigQuery
 type Runtime struct {
+	ProjectID    string              `bigquery:"project_id"`
+	Zone         string              `bigquery:"zone"`
 	InstanceID   int64               `bigquery:"instance_id"`
 	InstanceName string              `bigquery:"instance_name"`
-	Zone         string              `bigquery:"zone"`
 	Preemptible  bool                `bigquery:"preemptible"`
 	WorkflowID   bigquery.NullString `bigquery:"workflow_id"`
 	TaskCallName bigquery.NullString `bigquery:"task_call_name"`
 	Shard        bigquery.NullInt64  `bigquery:"shard"`
 	Attempt      bigquery.NullInt64  `bigquery:"attempt"`
-	CPU          int                 `bigquery:"cpu"`
+	CPUCount     int                 `bigquery:"cpu_count"`
 	CPUPlatform  string              `bigquery:"cpu_platform"`
 	MemTotalGB   float64             `bigquery:"mem_total_gb"`
+	DiskMounts   []string            `bigquery:"disk_mounts"`
 	DiskTotalGB  []float64           `bigquery:"disk_total_gb"`
 	Timestamp    time.Time           `bigquery:"timestamp"`
 }
