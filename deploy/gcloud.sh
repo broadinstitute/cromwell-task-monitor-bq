@@ -32,7 +32,7 @@ FUNCTION_NAME=${FUNCTION_NAME:-"cromwell-metadata-uploader"}
 
 ### Enable GCP APIs
 
-gcloud services enable deploymentmanager,iam
+gcloud services enable deploymentmanager iam
 
 ### Deploy the template
 
