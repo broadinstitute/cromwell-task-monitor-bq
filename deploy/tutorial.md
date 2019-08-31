@@ -42,7 +42,7 @@ Hope you're ready!
 
 Please run the following command in the shell:
 ```sh
-PROJECT_ID="{{project-id}}" ./deploy.sh
+PROJECT_ID="{{project-id}}" ./interactive.sh
 ```
 
 After the deployment is complete, the script will
