@@ -17,7 +17,7 @@ it will ask for a few parameters:
   to `final_workflow_log_dir` option in Cromwell.
 
   It **must** be in the same _project_
-  as the one you selected above ({{ project-id }}).
+  as the one you selected above (**{{project-id}}**).
 
   If you didn't have one beforehand,
   just press Enter, and we will create it for you.
@@ -32,7 +32,7 @@ Hope you're ready!
 
 Please run the following command in the shell:
 ```sh
-PROJECT_ID={{ project-id }} ./deploy.sh
+PROJECT_ID="{{project-id}}" ./deploy.sh
 ```
 
 After the deployment is complete, the script will
