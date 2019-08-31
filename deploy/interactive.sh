@@ -22,7 +22,7 @@ input CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL
 
 input DATASET_ID "cromwell_monitoring"
 
-gsutil mb -p ${PROJECT_ID} -l ${REGION} "${CROMWELL_LOGS_BUCKET}" || true
+gsutil mb -l ${REGION} "gs://${CROMWELL_LOGS_BUCKET}" || true
 
 ./docker.sh
 ./gcloud.sh

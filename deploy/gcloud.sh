@@ -2,9 +2,6 @@
 
 set -e
 
-# GCP project name for the deployment
-PROJECT_ID=${PROJECT_ID:-$(gcloud config list --format 'value(core.project)')}
-
 # GCP region for the deployment
 REGION=${REGION}
 
@@ -17,7 +14,7 @@ CROMWELL_BASEURL=${CROMWELL_BASEURL}
 # Cromwell Sam API base URL, e.g. https://sam.example.org
 CROMWELL_SAM_BASEURL=${CROMWELL_SAM_BASEURL}
 
-# Cromwell final_workflow_log_dir bucket (must belong to ${PROJECT_ID})
+# Cromwell final_workflow_log_dir bucket (must belong to the same project)
 CROMWELL_LOGS_BUCKET=${CROMWELL_LOGS_BUCKET}
 
 # Email of the Service Account used by your Cromwell task instances
@@ -45,7 +42,6 @@ deployment() {
   props="${props},datasetID:'${DATASET_ID}'"
 
   gcloud deployment-manager deployments "${action}" "${DEPLOYMENT_NAME}" \
-    --project ${PROJECT_ID} \
     --template "${DEPLOYMENT_TEMPLATE}" \
     --properties "${props}"
 }
@@ -54,7 +50,6 @@ deployment create || deployment update
 
 output() {
   gcloud deployment-manager deployments describe "${DEPLOYMENT_NAME}" \
-    --project ${PROJECT_ID} \
     --format "value(outputs.filter(name:$1).extract(finalValue).flatten())"
 }
 
@@ -66,7 +61,6 @@ dataset_console_url=$(output monitoringDatasetConsoleURL)
 (
   cd ../metadata
   gcloud functions deploy ${FUNCTION_NAME} \
-    --project ${PROJECT_ID} \
     --region ${REGION} \
     --trigger-bucket ${CROMWELL_LOGS_BUCKET} \
     --service-account ${metadata_sa_email} \

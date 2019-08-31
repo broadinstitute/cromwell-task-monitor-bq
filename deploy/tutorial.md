@@ -23,7 +23,7 @@ it will ask for a few parameters:
 - `CROMWELL_SAM_BASEURL` is the base URL of the Cromwell Sam API,
   e.g. `https://sam.example.org`
 
-- `CROMWELL_LOGS_BUCKET` is the bucket corresponding
+- `CROMWELL_LOGS_BUCKET` is the bucket name corresponding
   to `final_workflow_log_dir` option in Cromwell.
 
   It **must** be in the same _project_
@@ -40,12 +40,15 @@ it will ask for a few parameters:
 
 Hope you're ready!
 
-Please run the following command in the shell:
+Please run these commands, and follow the prompts:
 ```sh
-PROJECT_ID="{{project-id}}" ./interactive.sh
+gcloud config set project {{project-id}}
+./interactive.sh
 ```
 
 After the deployment is complete, the script will
 instruct you what to do next.
 
-Happy monitoring!
+## Happy monitoring!
+
+<walkthrough-conclusion-trophy/>
