@@ -1,0 +1,49 @@
+{% set PROJECT = env['project'] %}
+{% set PROJECT_NUMBER = env['project_number'] %}
+
+{% set PREFIX = env['deployment'] %}
+
+{% set CLOUDBUILD_SERVICE_ACCOUNT_EMAIL = PROJECT_NUMBER + '@cloudbuild.gserviceaccount.com' %}
+
+{% set METADATA_SERVICE_ACCOUNT = PREFIX + '-metadata-sa' %}
+{% set METADATA_SERVICE_ACCOUNT_ID = properties['cromwellMetadataServiceAccountName'] %}
+
+{% set TASK_SERVICE_ACCOUNT_EMAIL = properties['cromwellTaskServiceAccountEmail'] %}
+
+{% set DATASET = PREFIX + '-dataset' %}
+{% set DATASET_ID = properties['datasetID'] %}
+
+resources:
+- name: {{ METADATA_SERVICE_ACCOUNT }}
+  type: iam.v1.serviceAccount
+  properties:
+    accountId: {{ METADATA_SERVICE_ACCOUNT_ID }}
+    displayName: Client for Cromwell Metadata Uploader Cloud Function
+  accessControl:
+    gcpIamPolicy:
+      bindings:
+      - role: roles/iam.serviceAccountTokenCreator
+        members:
+        - projectOwner:{{ PROJECT }}
+        - serviceAccount:{{ CLOUDBUILD_SERVICE_ACCOUNT_EMAIL }}
+
+- name: {{ DATASET }}
+  type: bigquery.v2.dataset
+  properties:
+    datasetReference:
+      datasetId: {{ DATASET_ID }}
+    access:
+    - role: OWNER
+      specialGroup: projectOwners
+    - role: READER
+      specialGroup: projectReaders
+    - role: WRITER
+      userByEmail: serviceAccount:$(ref.{{ METADATA_SERVICE_ACCOUNT }}.email)
+    - role: WRITER
+      userByEmail: serviceAccount:{{ TASK_SERVICE_ACCOUNT_EMAIL }}
+
+outputs:
+- name: metadataServiceAccountEmail
+  value: $(ref.{{ METADATA_SERVICE_ACCOUNT }}.email)
+- name: monitoringDatasetConsoleURL
+  value: https://console.cloud.google.com/bigquery?p={{ PROJECT }}&d={{ DATASET_ID }}&page=dataset

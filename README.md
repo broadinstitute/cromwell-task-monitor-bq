@@ -6,7 +6,13 @@ of Cromwell task monitoring data into BigQuery.
 **Please note** that the code is still in an "**alpha**" state,
 and may introduce some breaking changes.
 
-## Monitoring image
+## Deployment
+
+[![Open in Cloud Shell](//gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/broadinstitute/cromwell-task-monitor-bq&cloudshell_working_dir=deploy&cloudshell_tutorial=deploy/tutorial.md)
+
+## Motivation
+
+### Monitoring image
 
 We provide a container for `monitoring_image`
 [workflow option](https://cromwell.readthedocs.io/en/stable/wf_options/Google/)
@@ -66,7 +72,7 @@ BigQuery allows up to 4,000
 [partitions per table](https://cloud.google.com/bigquery/quotas#partitioned_tables),
 i.e. one could hold up to ~11 years (!) worth of monitoring data.
 
-## Metadata upload
+### Metadata upload
 
 We also provide a Cloud Function that gets triggered
 when a workflow completes or fails, thanks to `final_workflow_log_dir`
@@ -101,7 +107,7 @@ be used to scale WDL Task resources with formulas, based on File input sizes, e.
 disks: 'local-disk ~{ceil(2.2 * size(bam, 'G') + 1.1)} HDD'
 ```
 
-## Cost analysis
+### Cost analysis
 
 The amount of data stored in the format described above
 is miniscule (~200KB / hour, when reporting one metric row per second).
