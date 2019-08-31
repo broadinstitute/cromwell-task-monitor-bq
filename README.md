@@ -4,7 +4,7 @@ This repo aims to enable massively parallel collection
 of Cromwell task monitoring data into BigQuery.
 
 **Please note** that the code is still in an "**alpha**" state,
-and may introduce some breaking changes.
+and may work incorrectly or introduce some breaking changes.
 
 ## Deployment
 
