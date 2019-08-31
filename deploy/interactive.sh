@@ -28,7 +28,7 @@ input DATASET_ID "cromwell_monitoring"
 gsutil mb -l ${REGION} "gs://${CROMWELL_LOGS_BUCKET}" || true
 
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-  --member "${PROJECT_NUMBER}@cloudservices.gserviceaccount.com" \
+  --member "serviceAccount:${PROJECT_NUMBER}@cloudservices.gserviceaccount.com" \
   --role "roles/owner" >/dev/null
 
 ./docker.sh
