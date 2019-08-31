@@ -14,6 +14,7 @@ input() {
 }
 
 PROJECT_ID=$(gcloud config list --format 'value(core.project)')
+PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format 'value(projectNumber)')
 
 input REGION "us-east1"
 
@@ -25,6 +26,10 @@ input CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL
 input DATASET_ID "cromwell_monitoring"
 
 gsutil mb -l ${REGION} "gs://${CROMWELL_LOGS_BUCKET}" || true
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member "${PROJECT_NUMBER}@cloudservices.gserviceaccount.com" \
+  --role "roles/owner" >/dev/null
 
 ./docker.sh
 ./gcloud.sh
