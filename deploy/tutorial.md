@@ -43,6 +43,8 @@ Hope you're ready!
 Please run these commands, and follow the prompts:
 ```sh
 gcloud config set project {{project-id}}
+```
+```sh
 ./interactive.sh
 ```
 

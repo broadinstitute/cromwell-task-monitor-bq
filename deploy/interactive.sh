@@ -13,6 +13,8 @@ input() {
   done
 }
 
+PROJECT_ID=$(gcloud config list --format 'value(core.project)')
+
 input REGION "us-east1"
 
 input CROMWELL_BASEURL
