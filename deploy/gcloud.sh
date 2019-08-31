@@ -30,6 +30,10 @@ CROMWELL_METADATA_SERVICE_ACCOUNT_NAME=${CROMWELL_METADATA_SERVICE_ACCOUNT_NAME:
 # that will query Cromwell workflow metadata and store it in BigQuery
 FUNCTION_NAME=${FUNCTION_NAME:-"cromwell-metadata-uploader"}
 
+### Enable GCP APIs
+
+gcloud services enable deploymentmanager,iam
+
 ### Deploy the template
 
 DEPLOYMENT_TEMPLATE="monitoring.jinja"
