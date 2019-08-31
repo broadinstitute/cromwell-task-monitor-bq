@@ -8,10 +8,9 @@ input() {
     prompt="${prompt} (default: $2)"
   fi
   while [ -z "${!1}" ]; do
-    read -p "${prompt}: " $1 && echo
-    $1=${1:-$2}
+    read -p "${prompt}: " value && echo
+    export $1=${value:-$2}
   done
-  export $1
 }
 
 input REGION "us-east1"
