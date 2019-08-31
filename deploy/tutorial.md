@@ -1,6 +1,16 @@
 # Deploy Cromwell Task Monitoring with BigQuery
 
+## Let's get started!
+
+This tutorial will help you set up
+Cromwell task resource monitoring with BigQuery,
+as described in more detail at
+[broadinstitute/cromwell-task-monitor-bq](https://github.com/broadinstitute/cromwell-task-monitor-bq#motivation)
+
+### First, please
 <walkthrough-project-billing-setup/>
+
+## Deploy
 
 When you run our deployment script (see below),
 it will ask for a few parameters:
