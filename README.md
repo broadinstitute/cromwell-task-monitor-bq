@@ -8,7 +8,7 @@ and may introduce some breaking changes.
 
 ## Deployment
 
-[![Open in Cloud Shell](//gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/broadinstitute/cromwell-task-monitor-bq&cloudshell_working_dir=deploy&cloudshell_tutorial=deploy/tutorial.md)
+[![Open in Cloud Shell](//gstatic.com/cloudssh/images/open-btn.png)](https://console.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/broadinstitute/cromwell-task-monitor-bq&cloudshell_working_dir=deploy&cloudshell_tutorial=tutorial.md)
 
 ## Motivation
 
