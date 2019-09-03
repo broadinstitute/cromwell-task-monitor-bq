@@ -22,3 +22,5 @@ docker build -t ${IMAGE} \
   --build-arg DATASET_ID=${DATASET_ID} ../monitor
 
 docker push ${IMAGE}
+
+echo "monitoring_image: ${IMAGE}"

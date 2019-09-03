@@ -25,11 +25,16 @@ input CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL
 
 input DATASET_ID "cromwell_monitoring"
 
+image_message=$(mktemp)
+
+./docker.sh | tee "${image_message}"
+
 gsutil mb -l ${REGION} "gs://${CROMWELL_LOGS_BUCKET}" || true
 
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
   --member "serviceAccount:${PROJECT_NUMBER}@cloudservices.gserviceaccount.com" \
   --role "roles/owner" >/dev/null
 
-./docker.sh
 ./gcloud.sh
+
+tail -1 "${image_message}"
