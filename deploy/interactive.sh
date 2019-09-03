@@ -8,7 +8,7 @@ input() {
     prompt="${prompt} (default: $2)"
   fi
   while [ -z "${!1}" ]; do
-    read -p "${prompt}: " value && echo
+    read -p "${prompt}: " value
     export $1=${value:-$2}
   done
 }

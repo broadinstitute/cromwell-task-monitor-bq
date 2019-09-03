@@ -41,9 +41,12 @@ DEPLOYMENT_TEMPLATE="monitoring.jinja"
 deployment() {
   local action="$1" && shift
 
-  local props="cromwellMetadataServiceAccountName:'${CROMWELL_METADATA_SERVICE_ACCOUNT_NAME}'"
+  local props="datasetID:'${DATASET_ID}'"
   props="${props},cromwellTaskServiceAccountEmail:'${CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL}'"
-  props="${props},datasetID:'${DATASET_ID}'"
+
+  if [ "${CROMWELL_BASEURL}" != "NA" ]; then
+    props="${props},cromwellMetadataServiceAccountName:'${CROMWELL_METADATA_SERVICE_ACCOUNT_NAME}'"
+  fi
 
   message=$(mktemp)
   gcloud deployment-manager deployments "${action}" "${DEPLOYMENT_NAME}" \
