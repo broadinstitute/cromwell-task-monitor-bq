@@ -3,7 +3,7 @@
 set -e
 
 # GCP project name for the deployment
-PROJECT_ID=$(gcloud config list --format 'value(core.project)')
+PROJECT_ID=${PROJECT_ID}
 
 # Google Container Registry location
 REGISTRY=${REGISTRY:-"us.gcr.io"}

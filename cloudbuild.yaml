@@ -11,6 +11,7 @@ steps:
   entrypoint: bash
   dir: deploy
   env:
+  - PROJECT_ID=${PROJECT_ID}
   - DATASET_ID=${_DATASET_ID}
   args:
   - ./docker.sh
