@@ -40,10 +40,10 @@ resources:
     - role: READER
       specialGroup: projectReaders
     - role: WRITER
-      iamMember: serviceAccount:{{ TASK_SERVICE_ACCOUNT_EMAIL }}
+      userByEmail: {{ TASK_SERVICE_ACCOUNT_EMAIL }}
     {% if METADATA_SERVICE_ACCOUNT_ID %}
     - role: WRITER
-      iamMember: serviceAccount:$(ref.{{ METADATA_SERVICE_ACCOUNT }}.email)
+      userByEmail: $(ref.{{ METADATA_SERVICE_ACCOUNT }}.email)
     {% endif %}
 
 outputs:
