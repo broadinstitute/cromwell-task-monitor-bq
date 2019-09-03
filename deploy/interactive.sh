@@ -13,7 +13,7 @@ input() {
   done
 }
 
-PROJECT_ID=$(gcloud config list --format 'value(core.project)')
+export PROJECT_ID=$(gcloud config list --format 'value(core.project)')
 PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format 'value(projectNumber)')
 
 input DATASET_ID "cromwell_monitoring"
