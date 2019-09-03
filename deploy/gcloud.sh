@@ -45,9 +45,17 @@ deployment() {
   props="${props},cromwellTaskServiceAccountEmail:'${CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL}'"
   props="${props},datasetID:'${DATASET_ID}'"
 
+  message=$(mktemp)
   gcloud deployment-manager deployments "${action}" "${DEPLOYMENT_NAME}" \
     --template "${DEPLOYMENT_TEMPLATE}" \
-    --properties "${props}"
+    --properties "${props}" &> "${message}"
+
+  rc=$?
+  message=$(cat "${message}")
+  if [ "${rc}" -ne 0 ] && [[ ${message} != *code=409* ]]; then
+    echo ${message}
+    exit ${rc}
+  fi
 }
 
 deployment create || deployment update
