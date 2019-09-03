@@ -8,6 +8,9 @@ REGION=${REGION}
 # Name of the deployment for Deployment Manager
 DEPLOYMENT_NAME=${DEPLOYMENT_NAME:-"cromwell-monitoring"}
 
+# BigQuery dataset name for monitoring tables
+DATASET_ID=${DATASET_ID}
+
 # Cromwell API base URL, e.g. https://cromwell.example.org
 CROMWELL_BASEURL=${CROMWELL_BASEURL}
 
@@ -19,9 +22,6 @@ CROMWELL_LOGS_BUCKET=${CROMWELL_LOGS_BUCKET}
 
 # Email of the Service Account used by your Cromwell task instances
 CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL=${CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL}
-
-# BigQuery dataset name for monitoring tables
-DATASET_ID=${DATASET_ID}
 
 # Name of the Service Account (to be created) for the Cloud Function (see below)
 CROMWELL_METADATA_SERVICE_ACCOUNT_NAME=${CROMWELL_METADATA_SERVICE_ACCOUNT_NAME:-"cromwell-metadata-uploader"}
@@ -57,54 +57,70 @@ output() {
     --format "value(outputs.filter(name:$1).extract(finalValue).flatten())"
 }
 
-metadata_sa_email=$(output metadataServiceAccountEmail)
 dataset_console_url=$(output monitoringDatasetConsoleURL)
 
 ### Deploy the Cloud Function
 
-(
-  cd ../metadata
-  gcloud functions deploy ${FUNCTION_NAME} \
-    --region ${REGION} \
-    --trigger-bucket ${CROMWELL_LOGS_BUCKET} \
-    --service-account ${metadata_sa_email} \
-    --set-env-vars DATASET_ID=${DATASET_ID},CROMWELL_BASEURL=${CROMWELL_BASEURL} \
-    --runtime go111 \
-    --memory 128MB
-)
+if [ "${CROMWELL_BASEURL}" != "NA" ]; then
 
-### Register CROMWELL_METADATA_SERVICE_ACCOUNT in Sam
+  metadata_sa_email=$(output metadataServiceAccountEmail)
 
-get_token() {
-  curl -sH "Authorization: Bearer $(gcloud auth print-access-token)" \
-    "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/$1:generateAccessToken" \
-    -H "Content-Type: application/json" \
-    -d "{
-      \"scope\": [
-          \"https://www.googleapis.com/auth/userinfo.email\",
-          \"https://www.googleapis.com/auth/userinfo.profile\"
-      ]
-    }" \
-    | python -c 'import json,sys; print(json.load(sys.stdin)["accessToken"])'
-}
+  (
+    cd ../metadata
+    gcloud functions deploy ${FUNCTION_NAME} \
+      --region ${REGION} \
+      --trigger-bucket ${CROMWELL_LOGS_BUCKET} \
+      --service-account ${metadata_sa_email} \
+      --set-env-vars DATASET_ID=${DATASET_ID},CROMWELL_BASEURL=${CROMWELL_BASEURL} \
+      --runtime go111 \
+      --memory 128MB
+  )
 
-token=$(get_token ${metadata_sa_email})
-curl -sH "Authorization: Bearer ${token}" "${CROMWELL_SAM_BASEURL}/register/user/v1" -d ""
+  ### Register CROMWELL_METADATA_SERVICE_ACCOUNT in Sam
+
+  if [ "${CROMWELL_SAM_BASEURL}" != "NA" ]; then
+    get_token() {
+      curl -sH "Authorization: Bearer $(gcloud auth print-access-token)" \
+        "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/$1:generateAccessToken" \
+        -H "Content-Type: application/json" \
+        -d "{
+          \"scope\": [
+              \"https://www.googleapis.com/auth/userinfo.email\",
+              \"https://www.googleapis.com/auth/userinfo.profile\"
+          ]
+        }" \
+        | python -c 'import json,sys; print(json.load(sys.stdin)["accessToken"])'
+    }
+
+    token=$(get_token ${metadata_sa_email})
+    curl -sH "Authorization: Bearer ${token}" "${CROMWELL_SAM_BASEURL}/register/user/v1" -d ""
+  fi
+fi
 
 ### Final instructions
 
 echo "
-  Deployment is complete.
+      Deployment is complete.
+"
 
-  ${metadata_sa_email} has been registered in Sam,
-  however you need to grant it READER role
-  on the Cromwell collection(s) to be accessed.
+if [ "${CROMWELL_BASEURL}" != "NA"  ]; then
+  if [ "${CROMWELL_SAM_BASEURL}" != "NA" ]; then
+    echo "
+      ${metadata_sa_email} has been registered in Sam,
+      however you need to grant it READER role
+      on the Cromwell collection(s) to be accessed.
+    "
+  fi
 
-  Additionally, please grant ${metadata_sa_email}
-  Storage Object Viewer role on all buckets
-  that are used in your Cromwell workflows.
+  echo "
+      Additionally, please grant ${metadata_sa_email}
+      Storage Object Viewer role on all buckets
+      that are used in your Cromwell workflows.
+  "
+fi
 
-  After you run the first workflow,
-  the monitoring tables will appear in
-  ${dataset_console_url}
+echo "
+      After you run the first workflow,
+      the monitoring tables will appear in
+      ${dataset_console_url}
 "

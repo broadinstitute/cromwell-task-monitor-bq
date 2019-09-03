@@ -1,5 +1,4 @@
 required:
-- cromwellMetadataServiceAccountName
 - cromwellTaskServiceAccountEmail
 - datasetID
 

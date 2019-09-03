@@ -14,6 +14,7 @@
 {% set DATASET_ID = properties['datasetID'] %}
 
 resources:
+{% if METADATA_SERVICE_ACCOUNT_ID %}
 - name: {{ METADATA_SERVICE_ACCOUNT }}
   type: iam.v1.serviceAccount
   properties:
@@ -26,6 +27,7 @@ resources:
         members:
         - projectOwner:{{ PROJECT }}
         - serviceAccount:{{ CLOUDBUILD_SERVICE_ACCOUNT_EMAIL }}
+{% endif %}
 
 - name: {{ DATASET }}
   type: bigquery.v2.dataset
@@ -38,12 +40,16 @@ resources:
     - role: READER
       specialGroup: projectReaders
     - role: WRITER
-      userByEmail: serviceAccount:$(ref.{{ METADATA_SERVICE_ACCOUNT }}.email)
-    - role: WRITER
       userByEmail: serviceAccount:{{ TASK_SERVICE_ACCOUNT_EMAIL }}
+    {% if METADATA_SERVICE_ACCOUNT_ID %}
+    - role: WRITER
+      userByEmail: serviceAccount:$(ref.{{ METADATA_SERVICE_ACCOUNT }}.email)
+    {% endif %}
 
 outputs:
+{% if METADATA_SERVICE_ACCOUNT_ID %}
 - name: metadataServiceAccountEmail
   value: $(ref.{{ METADATA_SERVICE_ACCOUNT }}.email)
+{% endif %}
 - name: monitoringDatasetConsoleURL
   value: https://console.cloud.google.com/bigquery?p={{ PROJECT }}&d={{ DATASET_ID }}&page=dataset

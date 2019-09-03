@@ -74,7 +74,7 @@ i.e. one could hold up to ~11 years (!) worth of monitoring data.
 
 ### Metadata upload
 
-We also provide a Cloud Function that gets triggered
+Optionally, we also provide a Cloud Function that gets triggered
 when a workflow completes or fails, thanks to `final_workflow_log_dir`
 [workflow option](https://cromwell.readthedocs.io/en/stable/Logging/#workflow-logs)
 in Cromwell.
