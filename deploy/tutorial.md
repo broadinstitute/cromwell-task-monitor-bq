@@ -23,7 +23,7 @@ it will ask for a few parameters:
 
   **Please Note:** if you _don't_ want to set up
   Cromwell Metadata monitoring in BigQuery,
-  then keep this value at the default `N/A`.
+  then keep this value as `N/A`.
 
 The following values are **only** needed if you
 provided a non-default `CROMWELL_BASEURL` above:
@@ -33,7 +33,7 @@ provided a non-default `CROMWELL_BASEURL` above:
 
   **Please Note:** if your Cromwell
   _doesn't_ use Sam to authorize requests,
-  then keep this value at the default `N/A`.
+  then keep this value as `N/A`.
 
 - `CROMWELL_LOGS_BUCKET` is the bucket name corresponding
   to `final_workflow_log_dir` option in Cromwell.
