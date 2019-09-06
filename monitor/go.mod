@@ -1,4 +1,4 @@
-module github.com/broadinstitute/cromwell-task-monitor-bbq/monitor
+module github.com/broadinstitute/cromwell-task-monitor-bq/monitor
 
 go 1.12
 

@@ -1,4 +1,4 @@
-module github.com/broadinstitute/cromwell-task-monitor-bbq/metadata
+module github.com/broadinstitute/cromwell-task-monitor-bq/metadata
 
 go 1.12
 
