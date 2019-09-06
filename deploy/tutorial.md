@@ -12,6 +12,8 @@ as described in more detail at
 
 ## Deploy
 
+### Review the inputs
+
 When you run our deployment script (see below),
 it will ask for a few parameters:
 
@@ -60,7 +62,9 @@ feel free to change them, if you know what you're doing 😉:
   the name and the location of the BigQuery dataset,
   where all monitoring tables will be stored.
 
-Ready? Please run this command, and follow the prompts:
+### Ready?
+
+Please run this command, and follow the prompts:
 ```sh
 gcloud config set project {{project-id}} && ./deploy/interactive.sh
 ```
