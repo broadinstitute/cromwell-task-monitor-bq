@@ -40,7 +40,7 @@ steps:
 
     ### Create BigQuery dataset
 
-    bq mk -f --dataset ${_DATASET_ID} --location ${_DATASET_LOCATION}
+    bq --location ${_DATASET_LOCATION} mk -f --dataset ${_DATASET_ID}
 
     # Grant Cromwell client service accounts Data Editor role on the dataset
 
