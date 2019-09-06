@@ -2,41 +2,76 @@
 
 set -e
 
+SUBSTITUTIONS=""
+NA="N/A"
+
 input() {
-  local prompt="Enter $1"
-  if [ -n "$2" ]; then
-    prompt="${prompt} (default: $2)"
+  local name="$1"
+  local default="$2"
+
+  local prompt="Enter ${name}"
+  if [ -n "${default}" ]; then
+    prompt="${prompt} (default: ${default})"
   fi
-  while [ -z "${!1}" ]; do
+
+  while [ -z "${!name}" ]; do
     read -p "${prompt}: " value
-    export $1=${value:-$2}
+    export ${name}=${value:-${default}}
   done
+  if [ "${!name}" = "${NA}" ]; then
+    export ${name}=
+  fi
+
+  SUBSTITUTIONS="_${name}=${!1},${SUBSTITUTIONS}"
 }
 
-export PROJECT_ID=$(gcloud config list --format 'value(core.project)')
+PROJECT_ID=$(gcloud config list --format 'value(core.project)')
 PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format 'value(projectNumber)')
 
-input DATASET_ID "cromwell_monitoring"
+input CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL "${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+input CROMWELL_BASEURL ${NA}
 
-input CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL
-input CROMWELL_BASEURL "NA"
-
-if [ "${CROMWELL_BASEURL}" != "NA" ]; then
-  input CROMWELL_SAM_BASEURL "NA"
+if [ -n "${CROMWELL_BASEURL}" ]; then
+  input CROMWELL_SAM_BASEURL ${NA}
   input CROMWELL_LOGS_BUCKET "${PROJECT_ID}-cromwell-logs"
-  input REGION "us-east1"
 
-  gsutil mb -l ${REGION} "gs://${CROMWELL_LOGS_BUCKET}" || true
+  input CROMWELL_METADATA_FUNCTION_REGION "us-east1"
+  input CROMWELL_METADATA_FUNCTION_NAME "cromwell-metadata-uploader"
+  input CROMWELL_METADATA_SERVICE_ACCOUNT_NAME "${CROMWELL_METADATA_FUNCTION_NAME}"
+
+  gsutil mb -l ${CROMWELL_METADATA_FUNCTION_REGION} \
+    "gs://${CROMWELL_LOGS_BUCKET}" || true
 fi
 
-image_message=$(mktemp)
+input GCR_REGISTRY "us.gcr.io"
+input MONITORING_IMAGE_NAME "cromwell-task-monitor-bq"
 
-./docker.sh | tee "${image_message}"
+input DATASET_ID "cromwell_monitoring"
+input DATASET_LOCATION "US"
 
-gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-  --member "serviceAccount:${PROJECT_NUMBER}@cloudservices.gserviceaccount.com" \
-  --role "roles/owner" >/dev/null
+echo "
+      -------------
+      Deploying ...
+"
 
-./gcloud.sh
+### Enable GCP APIs
 
-tail -1 "${image_message}"
+gcloud services enable iam
+
+### Grant Cloud Build permissions for deployment
+
+cloudbuild_sa_email="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
+
+add_role() {
+  gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member "serviceAccount:${cloudbuild_sa_email}" \
+    --role "roles/$1" >/dev/null
+}
+
+add_role bigquery.user
+add_role cloudfunctions.developer
+add_role iam.serviceAccountAdmin
+
+### Deploy through Cloud Build
+
+gcloud builds submit --substitutions ${SUBSTITUTIONS} .

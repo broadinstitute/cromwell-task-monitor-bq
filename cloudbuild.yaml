@@ -1,30 +1,143 @@
 substitutions:
-  _REGION: us-east1
+  _GCR_REGISTRY: us.gcr.io
+  _MONITORING_IMAGE_NAME: cromwell-task-monitor-bq
   _DATASET_ID: cromwell_monitoring
+  _DATASET_LOCATION: US
   _CROMWELL_BASEURL: '' # e.g. https://cromwell.example.org
   _CROMWELL_SAM_BASEURL: '' # e.g. https://sam.example.org
-  _CROMWELL_LOGS_BUCKET: '' # e.g. project-cromwell-logs
   _CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL: '' # e.g. cromwell-task@project.iam.gserviceaccount.com
+  _CROMWELL_LOGS_BUCKET: '' # e.g. project-cromwell-logs
+  _CROMWELL_METADATA_FUNCTION_REGION: us-east1
+  _CROMWELL_METADATA_FUNCTION_NAME: cromwell-metadata-uploader
+  _CROMWELL_METADATA_SERVICE_ACCOUNT_NAME: cromwell-metadata-uploader
 
 steps:
 - name: gcr.io/cloud-builders/docker
   entrypoint: bash
-  dir: deploy
+  dir: monitor
   env:
-  - PROJECT_ID=${PROJECT_ID}
-  - DATASET_ID=${_DATASET_ID}
+  - monitoring_image=${_GCR_REGISTRY}/${PROJECT_ID}/${_MONITORING_IMAGE_NAME}
   args:
-  - ./docker.sh
+  - -c
+  - |
+    set -e
+    docker build -t ${monitoring_image} --build-arg DATASET_ID=${_DATASET_ID} .
+    docker push ${monitoring_image}
 
-- name: gcr.io/cloud-builders/gcloud
+- name: google/cloud-sdk:alpine
   entrypoint: bash
   dir: deploy
   env:
-  - REGION=${_REGION}
-  - DATASET_ID=${_DATASET_ID}
-  - CROMWELL_BASEURL=${_CROMWELL_BASEURL}
-  - CROMWELL_SAM_BASEURL=${_CROMWELL_SAM_BASEURL}
-  - CROMWELL_LOGS_BUCKET=${_CROMWELL_LOGS_BUCKET}
-  - CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL=${_CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL}
+  - monitoring_image=${_GCR_REGISTRY}/${PROJECT_ID}/${_MONITORING_IMAGE_NAME}
   args:
-  - ./gcloud.sh
+  - -c
+  - |
+    set -e
+
+    ### Prep the environment
+
+    apk add jq
+
+    ### Create Cromwell metadata service account
+
+    gcloud iam service-accounts create ${_CROMWELL_METADATA_SERVICE_ACCOUNT_NAME} \
+      --display-name "Client for Cromwell Metadata Uploader Cloud Function" || true
+
+    metadata_sa_email="${_CROMWELL_METADATA_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+    cloudbuild_sa_email=$(gcloud config get-value account)
+
+    ### Create BigQuery dataset
+
+    bq mk -f --dataset ${_DATASET_ID} --location ${_DATASET_LOCATION}
+
+    # Grant Cromwell client service accounts Data Editor role on the dataset
+
+    dataset_json=$(mktemp)
+
+    bq show --format json ${_DATASET_ID} |
+      jq -r ".access |= (.+ [{
+        role: \"roles/bigquery.dataEditor\",
+        userByEmail: \"${_CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL}\"
+      },{
+        role: \"roles/bigquery.dataEditor\",
+        userByEmail: \"${metadata_sa_email}\"
+      }] | unique)" \
+      > "${dataset_json}"
+
+    bq update --source "${dataset_json}" ${_DATASET_ID}
+
+    ### Deploy the Cloud Function
+
+    add_role() {
+      gcloud iam service-accounts add-iam-policy-binding "${metadata_sa_email}" \
+        --member "serviceAccount:${cloudbuild_sa_email}" \
+        --role "roles/$1" >/dev/null
+    }
+
+    if [ -n "${_CROMWELL_BASEURL}" ]; then
+      (
+        cd ../metadata
+
+        add_role iam.serviceAccountUser
+
+        gcloud functions deploy ${_CROMWELL_METADATA_FUNCTION_NAME} \
+          --region ${_CROMWELL_METADATA_FUNCTION_REGION} \
+          --trigger-bucket ${_CROMWELL_LOGS_BUCKET} \
+          --service-account ${metadata_sa_email} \
+          --set-env-vars DATASET_ID=${_DATASET_ID},CROMWELL_BASEURL=${_CROMWELL_BASEURL} \
+          --entry-point Upload \
+          --runtime go111 \
+          --memory 128MB
+      )
+
+      ### Register CROMWELL_METADATA_SERVICE_ACCOUNT in Sam
+
+      if [ -n "${_CROMWELL_SAM_BASEURL}" ]; then
+        add_role iam.serviceAccountTokenCreator
+
+        get_token() {
+          curl -sH "Authorization: Bearer $(gcloud auth print-access-token)" \
+            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/$1:generateAccessToken" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"scope\": [
+                  \"https://www.googleapis.com/auth/userinfo.email\",
+                  \"https://www.googleapis.com/auth/userinfo.profile\"
+              ]
+            }" | jq -r .accessToken
+        }
+
+        token=$(get_token ${metadata_sa_email})
+        curl -sH "Authorization: Bearer ${token}" "${_CROMWELL_SAM_BASEURL}/register/user/v1" -d ""
+      fi
+    fi
+
+    ### Final instructions
+
+    echo "
+          -----------------------
+          Deployment is complete.
+
+          monitoring_image: ${monitoring_image}
+    "
+
+    if [ -n "${_CROMWELL_BASEURL}"  ]; then
+      if [ -n "${_CROMWELL_SAM_BASEURL}" ]; then
+        echo "
+          ${metadata_sa_email} has been registered in Sam,
+          however you need to grant it READER role on the Cromwell collection(s) to be accessed.
+        "
+      fi
+
+      echo "
+          Additionally, please grant ${metadata_sa_email}
+          Storage Object Viewer role on all buckets that are used in your Cromwell workflows.
+      "
+    fi
+
+    echo "
+          After you run the first workflow, the monitoring tables will appear in
+          https://console.cloud.google.com/bigquery?p=${PROJECT_ID}&d=${_DATASET_ID}&page=dataset
+
+          Happy monitoring 🎉!!!
+    "
