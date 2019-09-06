@@ -38,47 +38,53 @@ steps:
 
     apk add jq
 
-    ### Create Cromwell metadata service account
-
-    gcloud iam service-accounts create ${_CROMWELL_METADATA_SERVICE_ACCOUNT_NAME} \
-      --display-name "Client for Cromwell Metadata Uploader Cloud Function" || true
-
-    metadata_sa_email="${_CROMWELL_METADATA_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
-    cloudbuild_sa_email=$(gcloud config get-value account)
-
     ### Create BigQuery dataset
 
     bq mk -f --dataset ${_DATASET_ID} --location ${_DATASET_LOCATION}
 
     # Grant Cromwell client service accounts Data Editor role on the dataset
 
-    dataset_json=$(mktemp)
+    grant_dataset_editor() {
+      dataset_json=$(mktemp)
 
-    bq show --format json ${_DATASET_ID} |
-      jq -r ".access |= (.+ [{
-        role: \"roles/bigquery.dataEditor\",
-        userByEmail: \"${_CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL}\"
-      },{
-        role: \"roles/bigquery.dataEditor\",
-        userByEmail: \"${metadata_sa_email}\"
-      }] | unique)" \
-      > "${dataset_json}"
+      bq show --format json ${_DATASET_ID} |
+        jq -r ".access |= (.+ [{
+          role: \"roles/bigquery.dataEditor\",
+          userByEmail: \"$1\"
+        }] | unique)" \
+        > "${dataset_json}"
 
-    bq update --source "${dataset_json}" ${_DATASET_ID}
-
-    ### Deploy the Cloud Function
-
-    add_role() {
-      gcloud iam service-accounts add-iam-policy-binding "${metadata_sa_email}" \
-        --member "serviceAccount:${cloudbuild_sa_email}" \
-        --role "roles/$1" >/dev/null
+      bq update --source "${dataset_json}" ${_DATASET_ID}
     }
+
+    grant_dataset_editor ${_CROMWELL_TASK_SERVICE_ACCOUNT_EMAIL}
+
+    ### Deploy Cromwell Metadata Uploader Cloud Function
 
     if [ -n "${_CROMWELL_BASEURL}" ]; then
       (
         cd ../metadata
 
-        add_role iam.serviceAccountUser
+        # Create service account for the Function
+
+        gcloud iam service-accounts create ${_CROMWELL_METADATA_SERVICE_ACCOUNT_NAME} \
+          --display-name "Client for Cromwell Metadata Uploader Cloud Function" || true
+
+        metadata_sa_email="${_CROMWELL_METADATA_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+        cloudbuild_sa_email=$(gcloud config get-value account)
+
+        # Grant necessary roles to the Cloud Build service account
+
+        grant_function_role() {
+          gcloud iam service-accounts add-iam-policy-binding "${metadata_sa_email}" \
+            --member "serviceAccount:${cloudbuild_sa_email}" \
+            --role "roles/$1" >/dev/null
+        }
+
+        grant_function_role iam.serviceAccountUser
+        grant_dataset_editor ${metadata_sa_email}
+
+        # Deploy the Function
 
         gcloud functions deploy ${_CROMWELL_METADATA_FUNCTION_NAME} \
           --region ${_CROMWELL_METADATA_FUNCTION_REGION} \
@@ -88,28 +94,28 @@ steps:
           --entry-point Upload \
           --runtime go111 \
           --memory 128MB
+
+        # Register Function service account in Sam
+
+        if [ -n "${_CROMWELL_SAM_BASEURL}" ]; then
+          grant_function_role iam.serviceAccountTokenCreator
+
+          get_token() {
+            curl -sH "Authorization: Bearer $(gcloud auth print-access-token)" \
+              "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/$1:generateAccessToken" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"scope\": [
+                    \"https://www.googleapis.com/auth/userinfo.email\",
+                    \"https://www.googleapis.com/auth/userinfo.profile\"
+                ]
+              }" | jq -r .accessToken
+          }
+
+          token=$(get_token ${metadata_sa_email})
+          curl -sH "Authorization: Bearer ${token}" "${_CROMWELL_SAM_BASEURL}/register/user/v1" -d ""
+        fi
       )
-
-      ### Register CROMWELL_METADATA_SERVICE_ACCOUNT in Sam
-
-      if [ -n "${_CROMWELL_SAM_BASEURL}" ]; then
-        add_role iam.serviceAccountTokenCreator
-
-        get_token() {
-          curl -sH "Authorization: Bearer $(gcloud auth print-access-token)" \
-            "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/$1:generateAccessToken" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"scope\": [
-                  \"https://www.googleapis.com/auth/userinfo.email\",
-                  \"https://www.googleapis.com/auth/userinfo.profile\"
-              ]
-            }" | jq -r .accessToken
-        }
-
-        token=$(get_token ${metadata_sa_email})
-        curl -sH "Authorization: Bearer ${token}" "${_CROMWELL_SAM_BASEURL}/register/user/v1" -d ""
-      fi
     fi
 
     ### Final instructions

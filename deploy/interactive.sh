@@ -38,9 +38,6 @@ if [ -n "${CROMWELL_BASEURL}" ]; then
   input CROMWELL_METADATA_FUNCTION_REGION "us-east1"
   input CROMWELL_METADATA_FUNCTION_NAME "cromwell-metadata-uploader"
   input CROMWELL_METADATA_SERVICE_ACCOUNT_NAME "${CROMWELL_METADATA_FUNCTION_NAME}"
-
-  gsutil mb -l ${CROMWELL_METADATA_FUNCTION_REGION} \
-    "gs://${CROMWELL_LOGS_BUCKET}" || true
 fi
 
 input GCR_REGISTRY "us.gcr.io"
@@ -71,6 +68,13 @@ add_role() {
 add_role bigquery.user
 add_role cloudfunctions.developer
 add_role iam.serviceAccountAdmin
+
+### Create the bucket, if needed
+
+if [ -n "${CROMWELL_BASEURL}" ]; then
+  gsutil mb -l ${CROMWELL_METADATA_FUNCTION_REGION} \
+    "gs://${CROMWELL_LOGS_BUCKET}" || true
+fi
 
 ### Deploy through Cloud Build
 
