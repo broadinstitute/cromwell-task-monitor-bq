@@ -62,7 +62,7 @@ feel free to change them, if you know what you're doing 😉:
 
 Ready? Please run this command, and follow the prompts:
 ```sh
-gcloud config set project {{project-id}} && ./interactive.sh
+gcloud config set project {{project-id}} && ./deploy/interactive.sh
 ```
 
 After the deployment is complete, the script will
