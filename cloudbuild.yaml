@@ -29,6 +29,7 @@ steps:
   dir: deploy
   env:
   - monitoring_image=${_GCR_REGISTRY}/${PROJECT_ID}/${_MONITORING_IMAGE_NAME}
+  - metadata_sa_email=${_CROMWELL_METADATA_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
   args:
   - -c
   - |
@@ -70,10 +71,9 @@ steps:
         gcloud iam service-accounts create ${_CROMWELL_METADATA_SERVICE_ACCOUNT_NAME} \
           --display-name "Client for Cromwell Metadata Uploader Cloud Function" || true
 
-        metadata_sa_email="${_CROMWELL_METADATA_SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
-        cloudbuild_sa_email=$(gcloud config get-value account)
-
         # Grant necessary roles to the Cloud Build service account
+
+        cloudbuild_sa_email=$(gcloud config get-value account)
 
         grant_function_role() {
           gcloud iam service-accounts add-iam-policy-binding "${metadata_sa_email}" \
