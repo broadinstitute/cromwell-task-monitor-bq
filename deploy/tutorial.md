@@ -45,7 +45,7 @@ provided a non-default `CROMWELL_BASEURL` above:
   just press Enter, and we will create it for you.
 
 The following variables are **optional**, but
-feel free to change them if you know what you're doing 😉:
+feel free to change them, if you know what you're doing 😉:
 
 - `CROMWELL_METADATA_FUNCTION_NAME`,
   `CROMWELL_METADATA_FUNCTION_REGION`,
@@ -57,7 +57,7 @@ feel free to change them if you know what you're doing 😉:
   are GCR registry and name for the monitoring image.
 
 - `DATASET_ID` and `DATASET_LOCATION` are
-  the name and location of BigQuery dataset
+  the name and the location of the BigQuery dataset,
   where all monitoring tables will be stored.
 
 Ready? Please run this command, and follow the prompts:
