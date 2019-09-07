@@ -355,6 +355,11 @@ func startMeasure(
 ) (
 	err error,
 ) {
+	disks, err := getDisks()
+	if err != nil {
+		return
+	}
+
 	var m *Measurement
 	for {
 		select {
@@ -364,7 +369,7 @@ func startMeasure(
 			close(measurements)
 			return
 		}
-		m, err = measure()
+		m, err = measure(disks)
 		if err != nil {
 			return
 		}
@@ -372,7 +377,23 @@ func startMeasure(
 	}
 }
 
-func measure() (m *Measurement, err error) {
+func getDisks() (disks []string, err error) {
+	partitions, err := disk.Partitions(false)
+	if err != nil {
+		return
+	}
+	mounts := map[string]string{}
+	for _, p := range partitions {
+		mounts[p.Mountpoint] = p.Device
+	}
+	disks = make([]string, len(diskMounts))
+	for i, mount := range diskMounts {
+		disks[i] = mounts[mount]
+	}
+	return
+}
+
+func measure(disks []string) (m *Measurement, err error) {
 	// CPU
 	cpuUsed, err := cpu.Percent(0, true)
 	if err != nil {
@@ -398,14 +419,14 @@ func measure() (m *Measurement, err error) {
 		}
 		diskUsed[i] = stat.Used
 	}
-	diskIO, err := disk.IOCounters(diskMounts...)
+	diskIO, err := disk.IOCounters(disks...)
 	if err != nil {
 		return
 	}
-	for i, path := range diskMounts {
-		d := diskIO[path]
-		diskReads[i] = d.ReadCount
-		diskWrites[i] = d.WriteCount
+	for i, d := range disks {
+		stat := diskIO[d]
+		diskReads[i] = stat.ReadCount
+		diskWrites[i] = stat.WriteCount
 	}
 
 	m = &Measurement{
