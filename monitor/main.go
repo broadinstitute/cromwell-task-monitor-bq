@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -384,7 +385,7 @@ func getDisks() (disks []string, err error) {
 	}
 	mounts := map[string]string{}
 	for _, p := range partitions {
-		mounts[p.Mountpoint] = p.Device
+		mounts[p.Mountpoint] = filepath.Base(p.Device)
 	}
 	disks = make([]string, len(diskMounts))
 	for i, mount := range diskMounts {
