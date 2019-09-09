@@ -123,8 +123,6 @@ steps:
     echo "
           -----------------------
           Deployment is complete.
-
-          monitoring_image: ${monitoring_image}
     "
 
     if [ -n "${_CROMWELL_BASEURL}"  ]; then
@@ -142,6 +140,12 @@ steps:
     fi
 
     echo "
+          Please use the following workflow options
+          when submitting your jobs to PAPIv2 backend in Cromwell:
+
+          "final_workflow_log_dir": "gs://${_CROMWELL_LOGS_BUCKET}",
+          "monitoring_image": "${monitoring_image}",
+
           After you run the first workflow, the monitoring tables will appear in
           https://console.cloud.google.com/bigquery?p=${PROJECT_ID}&d=${_DATASET_ID}&page=dataset
 
