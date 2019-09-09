@@ -382,21 +382,11 @@ func startMeasure(
 func getDisks() (disks []string, err error) {
 	// Construct mount path -> device ID map
 	mounts := map[string]string{}
-
-	mountInfo, err := os.Open("/proc/self/mountinfo")
+	lines, err := scanFile("/proc/self/mountinfo", 5)
 	if err != nil {
 		return
 	}
-	defer mountInfo.Close()
-	scanner := bufio.NewScanner(mountInfo)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		fields := strings.Fields(line)
-		if len(fields) < 5 {
-			err = fmt.Errorf("Invalid mountinfo line: '%s'", line)
-			return
-		}
+	for _, fields := range lines {
 		devID := fields[2]
 		mount := fields[4]
 		mounts[mount] = devID
@@ -404,21 +394,11 @@ func getDisks() (disks []string, err error) {
 
 	// Construct device ID -> disk name map
 	devices := map[string]string{}
-
-	diskStats, err := os.Open("/proc/diskstats")
+	lines, err = scanFile("/proc/diskstats", 3)
 	if err != nil {
 		return
 	}
-	defer diskStats.Close()
-	scanner = bufio.NewScanner(diskStats)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		fields := strings.Fields(line)
-		if len(fields) < 3 {
-			err = fmt.Errorf("Invalid diskstats line: '%s'", line)
-			return
-		}
+	for _, fields := range lines {
 		devID := strings.Join(fields[:2], ":")
 		disk := fields[2]
 		devices[devID] = disk
@@ -429,6 +409,26 @@ func getDisks() (disks []string, err error) {
 	for i, mount := range diskMounts {
 		devID := mounts[mount]
 		disks[i] = devices[devID]
+	}
+	return
+}
+
+func scanFile(path string, nFields int) (lines [][]string, err error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) < nFields {
+			err = fmt.Errorf("Invalid %s line: '%s'", path, line)
+			return
+		}
+		lines = append(lines, fields[:nFields])
 	}
 	return
 }
