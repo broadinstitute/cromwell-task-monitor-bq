@@ -382,7 +382,7 @@ func startMeasure(
 func getDisks() (disks []string, err error) {
 	// Construct mount path -> device ID map
 	mounts := map[string]string{}
-	lines, err := scanFile("/proc/self/mountinfo", 5)
+	lines, err := scanFields("/proc/self/mountinfo", 5)
 	if err != nil {
 		return
 	}
@@ -394,7 +394,7 @@ func getDisks() (disks []string, err error) {
 
 	// Construct device ID -> disk name map
 	devices := map[string]string{}
-	lines, err = scanFile("/proc/diskstats", 3)
+	lines, err = scanFields("/proc/diskstats", 3)
 	if err != nil {
 		return
 	}
@@ -413,7 +413,7 @@ func getDisks() (disks []string, err error) {
 	return
 }
 
-func scanFile(path string, nFields int) (lines [][]string, err error) {
+func scanFields(path string, nFields int) (lines [][]string, err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return
