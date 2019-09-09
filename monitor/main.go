@@ -393,7 +393,7 @@ func getDisks() (disks []string, err error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		fields := strings.Fields(line)
-		if len(fields) != 11 {
+		if len(fields) != 12 {
 			err = fmt.Errorf("Invalid mountinfo line: '%s'", line)
 			return
 		}
