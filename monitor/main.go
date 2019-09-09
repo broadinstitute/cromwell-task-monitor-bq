@@ -420,11 +420,11 @@ func getDisks() (disks []string, err error) {
 			return
 		}
 		devID := strings.Join(fields[:2], ":")
-		device := fields[2]
-		devices[devID] = device
+		disk := fields[2]
+		devices[devID] = disk
 	}
 
-	// Construct the list of device names in the order of mount paths
+	// Construct the list of disk names in the order of mount paths
 	disks = make([]string, len(diskMounts))
 	for i, mount := range diskMounts {
 		devID := mounts[mount]
