@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -379,17 +380,55 @@ func startMeasure(
 }
 
 func getDisks() (disks []string, err error) {
-	partitions, err := disk.Partitions(false)
+	// Construct mount path -> device ID map
+	mounts := map[string]string{}
+
+	mountInfo, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return
 	}
-	mounts := map[string]string{}
-	for _, p := range partitions {
-		mounts[p.Mountpoint] = filepath.Base(p.Device)
+	defer mountInfo.Close()
+	scanner := bufio.NewScanner(mountInfo)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) != 11 {
+			err = fmt.Errorf("Invalid mountinfo line: '%s'", line)
+			return
+		}
+		devID := fields[2]
+		mount := fields[4]
+		mounts[mount] = devID
 	}
+
+	// Construct device ID -> disk name map
+	devices := map[string]string{}
+
+	diskStats, err := os.Open("/proc/diskstats")
+	if err != nil {
+		return
+	}
+	defer diskStats.Close()
+	scanner = bufio.NewScanner(diskStats)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) != 14 {
+			err = fmt.Errorf("Invalid diskstats line: '%s'", line)
+			return
+		}
+		devID := strings.Join(fields[:2], ":")
+		device := fields[2]
+		devices[devID] = device
+	}
+
+	// Construct the list of device names in the order of mount paths
 	disks = make([]string, len(diskMounts))
 	for i, mount := range diskMounts {
-		disks[i] = mounts[mount]
+		devID := mounts[mount]
+		disks[i] = devices[devID]
 	}
 	return
 }
