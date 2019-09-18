@@ -55,6 +55,7 @@ echo "
 
 gcloud services enable \
   cloudbuild.googleapis.com \
+  cloudfunctions.googleapis.com \
   compute.googleapis.com \
   iam.googleapis.com
 
