@@ -257,13 +257,12 @@ func parseRows(
 			err = fmt.Errorf("Unable to parse call name: '%s'", name)
 			return
 		}
+		callName := matches[2]
+		if len(callName) == 0 {
+			callName = matches[0]
+		}
 		for _, call := range calls {
 			if call.SubWorkflow.ID == "" {
-				if len(matches[2]) == 0 {
-					err = fmt.Errorf("Unable to parse task call name: '%s'", name)
-					return
-				}
-
 				var runtime *Runtime
 				runtime, err = parseRuntime(&call)
 				if err != nil {
@@ -333,7 +332,7 @@ func parseRows(
 					Preemptible:     call.Preemptible,
 					WorkflowName:    workflow.Name,
 					WorkflowID:      workflow.ID,
-					CallName:        matches[2],
+					CallName:        callName,
 					Shard:           call.Shard,
 					Attempt:         call.Attempt,
 					StartTime:       call.Start,
