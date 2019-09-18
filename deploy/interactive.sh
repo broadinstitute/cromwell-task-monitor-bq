@@ -53,7 +53,7 @@ echo "
 
 ### Enable GCP APIs
 
-gcloud services enable iam
+gcloud services enable cloudbuild iam
 
 ### Grant Cloud Build permissions for deployment
 
