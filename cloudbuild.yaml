@@ -148,7 +148,7 @@ steps:
 
     if [ -n "${_CROMWELL_LOGS_BUCKET}" ]; then
       echo -e "\n
-        \"final_workflow_log_dir\": \"gs://${_CROMWELL_LOGS_BUCKET}\",\c
+          \"final_workflow_log_dir\": \"gs://${_CROMWELL_LOGS_BUCKET}\",\c
       "
     fi
 
