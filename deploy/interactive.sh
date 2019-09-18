@@ -48,7 +48,7 @@ input DATASET_LOCATION "US"
 
 echo "
       -------------
-      Deploying ...
+      Deploying (< 5 min) ...
 "
 
 ### Enable GCP APIs
