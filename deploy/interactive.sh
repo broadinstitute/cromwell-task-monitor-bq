@@ -53,7 +53,9 @@ echo "
 
 ### Enable GCP APIs
 
-gcloud services enable cloudbuild iam
+gcloud services enable \
+  cloudbuild.googleapis.com \
+  iam.googleapis.com
 
 ### Grant Cloud Build permissions for deployment
 
