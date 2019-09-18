@@ -120,32 +120,39 @@ steps:
 
     ### Final instructions
 
-    echo "
+    echo -e "
           -----------------------
-          Deployment is complete.
+          Deployment is complete.\c
     "
 
     if [ -n "${_CROMWELL_BASEURL}"  ]; then
       if [ -n "${_CROMWELL_SAM_BASEURL}" ]; then
-        echo "
+        echo -e "\n
           ${metadata_sa_email} has been registered in Sam,
-          however you need to grant it READER role on the Cromwell collection(s) to be accessed.
+          however you need to grant it READER role on the Cromwell collection(s) to be accessed.\c
         "
       fi
 
-      echo "
+      echo -e "\n
           Additionally, please grant ${metadata_sa_email}
-          Storage Object Viewer role on all buckets that are used in your Cromwell workflows.
+          Storage Object Viewer role on all buckets that are used in your Cromwell workflows.\c
       "
     fi
 
-    echo "
+    echo -e "\n
           Please use the following workflow options
           when submitting your jobs to PAPIv2 backend in Cromwell:
 
-          \"final_workflow_log_dir\": \"gs://${_CROMWELL_LOGS_BUCKET}\",
-          \"monitoring_image\": \"${monitoring_image}\",
+          \"monitoring_image\": \"${monitoring_image}\",\c
+    "
 
+    if [ -n "${_CROMWELL_LOGS_BUCKET}" ]; then
+      echo -e "\n
+        \"final_workflow_log_dir\": \"gs://${_CROMWELL_LOGS_BUCKET}\",\c
+      "
+    fi
+
+    echo -e "\n
           After you run the first workflow, the monitoring tables will appear in
           https://console.cloud.google.com/bigquery?p=${PROJECT_ID}&d=${_DATASET_ID}&page=dataset
 
