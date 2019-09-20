@@ -221,6 +221,7 @@ func getAccessToken() (token string, err error) {
 		return
 	}
 
+	fmt.Printf("Requested token expires_in: %d\n", t.ExpiresIn)
 	token = t.AccessToken
 	SetCachedToken(token)
 	return
@@ -236,6 +237,7 @@ func SetCachedToken(token string) {
 // for service-accounts/default/token key
 type Token struct {
 	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
 }
 
 // CachedToken contains cached access token data

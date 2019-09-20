@@ -9,7 +9,7 @@ import (
 
 	"cloud.google.com/go/functions/metadata"
 
-	meta "github.com/broadinstitute/cromwell-task-monitor-bbq/metadata"
+	meta "github.com/broadinstitute/cromwell-task-monitor-bq/metadata"
 )
 
 func main() {
