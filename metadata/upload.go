@@ -22,7 +22,7 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-const tokenLifetimeSec = 3000
+const minTokenLifetimeSec = 60
 
 var (
 	cromwellBaseURL = os.Getenv("CROMWELL_BASEURL")
@@ -203,7 +203,6 @@ func getAccessToken() (token string, err error) {
 		token = cachedToken.Value
 		return
 	}
-
 	scopes := []string{
 		"https://www.googleapis.com/auth/userinfo.email",
 		"https://www.googleapis.com/auth/userinfo.profile",
@@ -220,17 +219,16 @@ func getAccessToken() (token string, err error) {
 	if err != nil {
 		return
 	}
-
-	fmt.Printf("Requested token expires_in: %d\n", t.ExpiresIn)
-	token = t.AccessToken
-	SetCachedToken(token)
+	SetCachedToken(&t)
 	return
 }
 
 // SetCachedToken sets up the token cache
-func SetCachedToken(token string) {
-	cachedToken.Value = token
-	cachedToken.ExpiresAt = time.Now().Add(time.Second * tokenLifetimeSec)
+func SetCachedToken(t *Token) {
+	cachedToken.Value = t.AccessToken
+	cachedToken.ExpiresAt = time.Now().Add(
+		time.Second * time.Duration(t.ExpiresIn-minTokenLifetimeSec),
+	)
 }
 
 // Token respresents response from instance metadata endpoint
