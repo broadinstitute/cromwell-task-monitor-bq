@@ -219,16 +219,18 @@ func getAccessToken() (token string, err error) {
 	if err != nil {
 		return
 	}
-	SetCachedToken(&t)
+	token = SetCachedToken(&t)
 	return
 }
 
 // SetCachedToken sets up the token cache
-func SetCachedToken(t *Token) {
-	cachedToken.Value = t.AccessToken
+func SetCachedToken(t *Token) (token string) {
+	token = t.AccessToken
+	cachedToken.Value = token
 	cachedToken.ExpiresAt = time.Now().Add(
 		time.Second * time.Duration(t.ExpiresIn-minTokenLifetimeSec),
 	)
+	return
 }
 
 // Token respresents response from instance metadata endpoint
