@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -133,11 +132,19 @@ func getWorkflow(id string) (workflow *Workflow, err error) {
 	req.Header.Add("Authorization", "Bearer "+token)
 
 	q := req.URL.Query()
-	call := reflect.TypeOf(Call{})
-	for i := 0; i < call.NumField(); i++ {
-		q.Add("includeKey", call.Field(i).Tag.Get("json"))
+	for _, key := range excludeKeys {
+		q.Add("excludeKey", key)
 	}
-	q.Add("includeKey", "workflowName")
+	// TODO Use includeKey instead of excludeKey
+	// when Cromwell fixes a bug for combining
+	// expandSubWorkflows with includeKey:
+	//
+	// call := reflect.TypeOf(Call{})
+	// for i := 0; i < call.NumField(); i++ {
+	// 	q.Add("includeKey", call.Field(i).Tag.Get("json"))
+	// }
+	// q.Add("includeKey", "workflowName")
+	//
 	q.Add("expandSubWorkflows", "true")
 	req.URL.RawQuery = q.Encode()
 
@@ -157,6 +164,13 @@ func getWorkflow(id string) (workflow *Workflow, err error) {
 	workflow = &Workflow{}
 	err = json.NewDecoder(res.Body).Decode(workflow)
 	return
+}
+
+var excludeKeys = []string{
+	"submittedFiles", "workflowProcessingEvents", "executionEvents",
+	"workflowRoot", "callRoot", "callCaching", "outputs",
+	"commandLine", "failures", "returnCode", "stderr", "stdout",
+	"monitoringLog", "backend", "compressedDockerSize", "labels", "jobId",
 }
 
 // Workflow represents partial response to
