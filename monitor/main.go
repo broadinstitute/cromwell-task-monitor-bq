@@ -507,6 +507,7 @@ func startReport(
 				if err == nil {
 					break
 				}
+				log.Printf("%T %+v", err, err)
 				if e, ok := err.(net.Error); ok && (e.Temporary() || e.Timeout()) {
 					continue
 				}
