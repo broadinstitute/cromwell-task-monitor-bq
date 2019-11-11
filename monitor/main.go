@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -501,8 +502,14 @@ func startReport(
 		points = append(points, m)
 		now := time.Now()
 		if now.After(end) {
-			err = report(ctx, points, last)
-			if err != nil {
+			for {
+				err = report(ctx, points, last)
+				if err == nil {
+					break
+				}
+				if e, ok := err.(net.Error); ok && (e.Temporary() || e.Timeout()) {
+					continue
+				}
 				return
 			}
 			end = now.Add(reportInterval)
