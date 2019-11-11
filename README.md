@@ -3,9 +3,6 @@
 This repo aims to enable massively parallel collection
 of Cromwell task monitoring data into BigQuery.
 
-**Please note** that the code is still in an "**alpha**" state,
-and may work incorrectly or introduce some breaking changes.
-
 ## Deployment
 
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/broadinstitute/cromwell-task-monitor-bq&cloudshell_git_branch=release&cloudshell_tutorial=deploy/tutorial.md)
