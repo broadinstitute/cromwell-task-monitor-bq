@@ -69,6 +69,9 @@ BigQuery allows up to 4,000
 [partitions per table](https://cloud.google.com/bigquery/quotas#partitioned_tables),
 i.e. one could hold up to ~11 years (!) worth of monitoring data.
 
+Last but not least, the monitoring container is very light:
+it takes ~1 sec to fetch from GCR, and consumes < 0.05% CPU and < 10 MB of RAM at runtime.
+
 ### Metadata upload
 
 Optionally, we also provide a Cloud Function that gets triggered
