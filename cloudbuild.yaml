@@ -93,7 +93,8 @@ steps:
           --set-env-vars DATASET_ID=${_DATASET_ID},CROMWELL_BASEURL=${_CROMWELL_BASEURL} \
           --entry-point Upload \
           --runtime go111 \
-          --memory 128MB
+          --memory 128MB \
+          --timeout 540s
 
         # Register Function service account in Sam
 
