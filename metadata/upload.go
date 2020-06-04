@@ -37,7 +37,7 @@ var bqInserter *bigquery.Inserter
 var cachedToken CachedToken
 
 func init() {
-	httpClient = &http.Client{}
+	httpClient = &http.Client{Timeout: 20 * time.Second,}
 	metaClient = gcpMetadata.NewClient(httpClient)
 
 	var err error
