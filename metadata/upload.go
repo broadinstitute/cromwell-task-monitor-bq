@@ -29,7 +29,6 @@ var (
 	projectID       = os.Getenv("GCP_PROJECT")
 	datasetID       = os.Getenv("DATASET_ID")
 	tableID         = getEnv("TABLE_ID", "metadata")
-	gcsFetchBufferSize, _ = strconv.Atoi(os.Getenv("GCS_QUERY_THROTTLE"))
 )
 
 var httpClient *http.Client
@@ -51,6 +50,11 @@ func init() {
 	}
 
 	bqInserter, err = getInserter(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	gcsFetchBufferSize, err = strconv.Atoi(getEnv("GCS_QUERY_THROTTLE", "500"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,13 +86,13 @@ func Upload(ctx context.Context, event StorageEvent) (err error) {
 	if err != nil {
 		return
 	} else {
-		os.Stderr.WriteString("API call to cromwell server finished.\n")
+		fmt.Fprintln(os.Stderr, "API call to cromwell server finished.")
 	}
 	rows, err := parseRows(ctx, workflow)
 	if err != nil {
 		return
 	} else {
-		os.Stderr.WriteString("All metadata have been parsed.\n")
+		fmt.Fprintln(os.Stderr, "All metadata have been parsed.")
 	}
 	return uploadRows(ctx, rows)
 }
@@ -282,7 +286,7 @@ func processGCSQuery(ctx context.Context, wg *sync.WaitGroup,
 					 jobs chan GcsQueryJob, results chan GcsQueryResult) {
     for job := range jobs {
 		file := job.file
-		var e error = nil
+		var e error
 		if (file.Type == "file") {
 			f := &file.Value
 			size, err := getGcsSize(ctx, f.StringVal)
@@ -355,8 +359,6 @@ func parseRows(
 		}
 		for _, call := range calls {
 			if call.SubWorkflow.ID == "" {
-				fmt.Fprintf(os.Stderr, "Processing task %s, shard %d, attempt %d.\n",
-										callName, call.Shard, call.Attempt)
 				var runtime *Runtime
 				runtime, err = parseRuntime(&call)
 				if err != nil {
@@ -388,9 +390,6 @@ func parseRows(
 					}
 				}
 				close(jobs)
-				fmt.Fprintf(os.Stderr, "  Total number of inputs to go through: %d\n", len(inputs))
-				fmt.Fprintf(os.Stderr, "  Total number of files  to go through: %d\n", fileCnt)
-				fmt.Fprintf(os.Stderr, "  Total number of nonFiles            : %d\n", len(nonFiles))
 
 				var filesChan = make(chan *BQInput, len(inputs))
 				done := make(chan bool)
@@ -404,7 +403,6 @@ func parseRows(
 				for f := range filesChan {
 					files = append(files, f)
 				}
-				fmt.Fprintf(os.Stderr, "  Total number of file-sizes collected: %d\n", len(files))
 
 				inputs = append(files, nonFiles...)
 				sort.Slice(inputs, func(i, j int) bool {
