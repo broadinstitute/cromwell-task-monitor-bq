@@ -36,6 +36,7 @@ var metaClient *gcpMetadata.Client
 var storageClient *storage.Client
 var bqInserter *bigquery.Inserter
 var cachedToken CachedToken
+var gcsFetchBufferSize int
 
 func init() {
 	httpClient = &http.Client{Timeout: 20 * time.Second,}
