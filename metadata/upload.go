@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -53,11 +52,6 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	gcsFetchBufferSize, err = strconv.Atoi(getEnv("GCS_QUERY_THROTTLE", "500"))
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func getEnv(key, defaultValue string) string {
@@ -79,20 +73,14 @@ func Upload(ctx context.Context, event StorageEvent) (err error) {
 	id, err := parseWorkflowID(event.Path)
 	if err != nil {
 		return
-	} else {
-		fmt.Fprintf(os.Stderr, "Workflow ID %s parsed.\n", id)
 	}
 	workflow, err := getWorkflow(id)
 	if err != nil {
 		return
-	} else {
-		fmt.Fprintln(os.Stderr, "API call to cromwell server finished.")
 	}
 	rows, err := parseRows(ctx, workflow)
 	if err != nil {
 		return
-	} else {
-		fmt.Fprintln(os.Stderr, "All metadata have been parsed.")
 	}
 	return uploadRows(ctx, rows)
 }
@@ -272,74 +260,6 @@ type CachedToken struct {
 	ExpiresAt time.Time
 }
 
-// ######################################## //
-// block to implement buffered query into GCS
-type GcsQueryJob struct {
-	id    int
-	file *BQInput
-}
-type GcsQueryResult struct {
-	err   error
-	file *BQInput
-}
-func processGCSQuery(ctx context.Context, wg *sync.WaitGroup,
-					 jobs chan GcsQueryJob, results chan GcsQueryResult) {
-    for job := range jobs {
-		file := job.file
-		var e error
-		if (file.Type == "file") {
-			f := &file.Value
-			size, err := getGcsSize(ctx, f.StringVal)
-			if err == nil {
-				f.StringVal = fmt.Sprintf("%f", size)
-			} else {
-				if getStatus(err) == http.StatusForbidden {
-					f.Valid = false
-					fmt.Fprintf(os.Stderr, "Cannot access: %s,\n  for reason: %s\n",
-								f.StringVal, err.Error())
-				} else if strings.Contains(err.Error(), "doesn't exist") {
-					f.Valid = false
-					fmt.Fprintf(os.Stderr, "%s: %s\n", err.Error(), f.StringVal)
-				} else {
-					e = err
-					return
-				}
-			}
-		}
-		res := GcsQueryResult{e, file}
-		results <- res
-    }
-    wg.Done()
-}
-func createWorkerPool(ctx context.Context,
-					  numOfWorkers int,
-					  callName string, attempt int, shard int,
-					  jobs chan GcsQueryJob, results chan GcsQueryResult) {
-    var wg sync.WaitGroup
-    for i := 0; i < numOfWorkers; i++ {
-        wg.Add(1)
-        go processGCSQuery(ctx, &wg, jobs, results)
-    }
-    wg.Wait()
-    close(results)
-}
-// get the files from the result channel, stop if there's any error
-func collectGcsQueryResults(results chan GcsQueryResult,
-							filesChan chan *BQInput,
-							done chan bool) {
-	for res := range results {
-		if res.err != nil {
-			fmt.Fprintf(os.Stderr, "Error on GCS path: %s,\n  for reason: %s\n",
-						res.file.Value.StringVal, res.err.Error())
-			return
-		} else if res.file.Type == "file" {
-			filesChan <- res.file
-		}
-	}
-	done <- true
-}
-// ######################################## //
-
 func parseRows(
 	ctx context.Context,
 	workflow *Workflow,
@@ -376,32 +296,44 @@ func parseRows(
 					inputs = append(inputs, kInputs...)
 				}
 
+				files := []*BQInput{}
 				nonFiles := []*BQInput{}
-				// create & stuff a channel holding jobs
-				fileCnt := 0
-				var jobs = make(chan GcsQueryJob, len(inputs))
-				for i, input := range inputs {
-					if (input.Type == "file") {
-						fileCnt++
-						job := GcsQueryJob{i, input}
-						jobs <- job
+
+				sizedFiles := make(chan *BQInput, len(inputs))
+				errs := make(chan error, 1)
+
+				for _, input := range inputs {
+					if input.Type == "file" {
+						go func(file BQInput) {
+							f := &file.Value
+							size, err := getGcsSize(ctx, f.StringVal)
+							if err != nil {
+								if getStatus(err) == http.StatusForbidden {
+									fmt.Println(err)
+									f.Valid = false
+								} else if strings.Contains(err.Error(), "doesn't exist") {
+									f.Valid = false
+								} else {
+									errs <- fmt.Errorf("%s: %s", f.StringVal, err.Error())
+									return
+								}
+							}
+							f.StringVal = fmt.Sprintf("%f", size)
+							sizedFiles <- &file
+						}(*input)
 					} else {
 						nonFiles = append(nonFiles, input)
 					}
 				}
-				close(jobs)
 
-				var filesChan = make(chan *BQInput, len(inputs))
-				done := make(chan bool)
-				var results = make(chan GcsQueryResult, len(inputs))
-				createWorkerPool(ctx, gcsFetchBufferSize, callName, call.Attempt, call.Shard, jobs, results)
-				go collectGcsQueryResults(results, filesChan, done)
-				<- done
-				close(filesChan)
-
-				files := []*BQInput{}
-				for f := range filesChan {
-					files = append(files, f)
+				nFiles := len(inputs) - len(nonFiles)
+				for len(files) < nFiles {
+					select {
+					case file := <-sizedFiles:
+						files = append(files, file)
+					case err = <-errs:
+						return
+					}
 				}
 
 				inputs = append(files, nonFiles...)
