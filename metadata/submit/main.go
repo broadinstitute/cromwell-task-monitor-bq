@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"cloud.google.com/go/functions/metadata"
 
@@ -14,7 +15,10 @@ import (
 
 func main() {
 
-	meta.SetCachedToken(os.Getenv("TOKEN"))
+	meta.SetCachedToken(&meta.Token{
+		AccessToken: os.Getenv("CROMWELL_ACCESS_TOKEN"),
+		ExpiresIn:   int(time.Duration(time.Hour).Seconds()),
+	})
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
