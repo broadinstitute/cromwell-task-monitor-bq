@@ -137,16 +137,9 @@ func parseWorkflowID(path string) (id string, err error) {
 func checkNakedIP()(cromwellServerURL string, err error) {
 	isNakedIP := (net.ParseIP(cromwellBaseURL) != nil)
 	if isNakedIP {
-		cromwellURL_http := "http://" + cromwellBaseURL
-		_, err_http := http.Get(cromwellURL_http)
-		cromwellURL_https := "https://" + cromwellBaseURL
-		_, err_https := http.Get(cromwellURL_https)
-		if err_http == nil {
-			cromwellServerURL = cromwellURL_http
-		} else if err_https == nil {
-			cromwellServerURL = cromwellURL_https
-		} else {
-			err = err_http
+		cromwellServerURL = "http://" + cromwellBaseURL
+		_, err = http.Get(cromwellServerURL)
+		if err != nil {
 			return
 		}
 	} else {
