@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"net"
 
 	"cloud.google.com/go/bigquery"
 	gcpMetadata "cloud.google.com/go/compute/metadata"
@@ -133,13 +134,40 @@ func parseWorkflowID(path string) (id string, err error) {
 	return
 }
 
+func checkNakedIP()(cromwellServerURL string, err error) {
+	isNakedIP := (net.ParseIP(cromwellBaseURL) != nil)
+	if isNakedIP {
+		cromwellURL_http := "http://" + cromwellBaseURL
+		_, err_http := http.Get(cromwellURL_http)
+		cromwellURL_https := "https://" + cromwellBaseURL
+		_, err_https := http.Get(cromwellURL_https)
+		if err_http == nil {
+			cromwellServerURL = cromwellURL_http
+		} else if err_https == nil {
+			cromwellServerURL = cromwellURL_https
+		} else {
+			err = err_http
+			return
+		}
+	} else {
+		cromwellServerURL = cromwellBaseURL
+	}
+	return
+}
+
 func getWorkflow(id string) (workflow *Workflow, err error) {
 	token, err := getAccessToken()
 	if err != nil {
 		return
 	}
 
-	uri := fmt.Sprintf("%s/api/workflows/v1/%s/metadata", cromwellBaseURL, id)
+	// in case a naked IP address is given, prepend with http or https
+	cromwellURL, err := checkNakedIP()
+	if err != nil {
+		return
+	}
+
+	uri := fmt.Sprintf("%s/api/workflows/v1/%s/metadata", cromwellURL, id)
 	req, err := http.NewRequest("GET", uri, nil)
 
 	req.Header.Add("Authorization", "Bearer "+token)
